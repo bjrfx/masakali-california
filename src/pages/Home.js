@@ -315,7 +315,7 @@ export default function Home() {
             {[...Array(8)].map((_, setIdx) => (
               <React.Fragment key={setIdx}>
                 <div className="flex-shrink-0 mx-10 md:mx-16 flex items-center justify-center" style={{ minWidth: '200px' }}>
-                  <img src="/logo/Masakali-Indian-Cuisine.svg" alt="Masakali Indian Cuisine" className="h-20 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
+                  <img src="/logo/Masakali-Indian-Cuisine.png" alt="Masakali Indian Cuisine" className="h-20 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
                 </div>
                 <div className="flex-shrink-0 mx-10 md:mx-16 flex items-center justify-center" style={{ minWidth: '200px' }}>
                   <img src="/logo/Masakali-RestoBar.png" alt="Masakali Restobar" className="h-16 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
@@ -439,9 +439,9 @@ export default function Home() {
                         <span className="text-xs px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">Veg</span>
                       )}
                       <span className={`text-xs px-2 py-1 rounded-full ${item.spice_level === 'mild' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
-                          item.spice_level === 'medium' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
-                            item.spice_level === 'hot' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
-                              'bg-red-500/10 text-red-600 dark:text-red-400'
+                        item.spice_level === 'medium' ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' :
+                          item.spice_level === 'hot' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' :
+                            'bg-red-500/10 text-red-600 dark:text-red-400'
                         }`}>
                         {item.spice_level}
                       </span>
@@ -514,9 +514,9 @@ export default function Home() {
                   <div className="flex items-start justify-between mb-4">
                     <MapPin size={20} className="text-amber-500 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <span className={`text-xs px-2 py-1 rounded-full ${loc.status === 'New' ? 'bg-blue-500/10 text-blue-500 dark:text-blue-400' :
-                        loc.status === 'Coming Soon' ? 'bg-purple-500/10 text-purple-500 dark:text-purple-400' :
-                          loc.status === 'Main Branch' ? 'bg-amber-500/10 text-amber-500 dark:text-amber-400' :
-                            'bg-green-500/10 text-green-500 dark:text-green-400'
+                      loc.status === 'Coming Soon' ? 'bg-purple-500/10 text-purple-500 dark:text-purple-400' :
+                        loc.status === 'Main Branch' ? 'bg-amber-500/10 text-amber-500 dark:text-amber-400' :
+                          'bg-green-500/10 text-green-500 dark:text-green-400'
                       }`}>
                       {loc.status}
                     </span>
