@@ -17,6 +17,7 @@ try { require('dotenv').config(); } catch (e) { }
 const app = express();
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'masakali_secret_2024';
+const CLOVER_MENU_URL = process.env.CLOVER_MENU_URL || 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV7NPE1/menu?orderType=PICKUP';
 
 // =====================================================
 // Middleware
@@ -67,58 +68,121 @@ const mockRestaurants = [
   { id: 6, name: 'Masakali Indian Cuisine – California', slug: 'california', brand: 'Masakali Indian Cuisine', address: '10310 S De Anza Blvd', city: 'Cupertino', province_state: 'California', country: 'USA', phone: '', email: 'contact@masakalicalifornia.com', website: 'https://masakalicalifornia.com', is_active: true },
 ];
 
-const mockCategories = [
-  { id: 1, name: 'Starters', slug: 'starters', sort_order: 1 },
-  { id: 2, name: 'Vegetarian Curries', slug: 'veg-curries', sort_order: 2 },
-  { id: 3, name: 'Non-Veg Curries', slug: 'nonveg-curries', sort_order: 3 },
-  { id: 4, name: 'Tandoori', slug: 'tandoori', sort_order: 4 },
-  { id: 5, name: 'Indo-Chinese', slug: 'indo-chinese', sort_order: 5 },
-  { id: 6, name: 'Biryani', slug: 'biryani', sort_order: 6 },
-  { id: 7, name: 'Breads', slug: 'breads', sort_order: 7 },
-  { id: 8, name: 'Desserts', slug: 'desserts', sort_order: 8 },
-  { id: 9, name: 'Drinks', slug: 'drinks', sort_order: 9 },
-];
+function normalizeSpiceLevel(value) {
+  const normalized = String(value || '').toLowerCase().replace(/\s+/g, '_');
+  if (normalized === 'mild' || normalized === 'medium' || normalized === 'hot' || normalized === 'extra_hot') {
+    return normalized;
+  }
+  return 'medium';
+}
 
-const mockMenuItems = [
-  { id: 1, name: 'Samosa (2 pcs)', description: 'Crispy pastry filled with spiced potatoes and peas', price: 7.99, category_id: 1, is_vegetarian: true, spice_level: 'medium', is_featured: true },
-  { id: 2, name: 'Chicken Tikka', description: 'Tender chicken marinated in yogurt and spices, grilled in tandoor', price: 15.99, category_id: 1, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 3, name: 'Paneer Pakora', description: 'Golden fried cottage cheese fritters with mint chutney', price: 12.99, category_id: 1, is_vegetarian: true, spice_level: 'mild', is_featured: false },
-  { id: 4, name: 'Onion Bhaji', description: 'Crispy onion fritters seasoned with herbs and spices', price: 8.99, category_id: 1, is_vegetarian: true, spice_level: 'mild' },
-  { id: 5, name: 'Fish Amritsari', description: 'Crispy battered fish fillets with tamarind sauce', price: 14.99, category_id: 1, is_vegetarian: false, spice_level: 'medium' },
-  { id: 6, name: 'Paneer Butter Masala', description: 'Cottage cheese in rich creamy tomato sauce', price: 16.99, category_id: 2, is_vegetarian: true, spice_level: 'mild', is_featured: true },
-  { id: 7, name: 'Dal Makhani', description: 'Slow-cooked black lentils in creamy butter sauce', price: 14.99, category_id: 2, is_vegetarian: true, spice_level: 'mild', is_featured: true },
-  { id: 8, name: 'Palak Paneer', description: 'Cottage cheese cubes in smooth spinach gravy', price: 15.99, category_id: 2, is_vegetarian: true, spice_level: 'mild' },
-  { id: 9, name: 'Chana Masala', description: 'Chickpeas in aromatic spiced tomato gravy', price: 13.99, category_id: 2, is_vegetarian: true, spice_level: 'medium' },
-  { id: 10, name: 'Malai Kofta', description: 'Cottage cheese and potato dumplings in creamy sauce', price: 16.99, category_id: 2, is_vegetarian: true, spice_level: 'mild' },
-  { id: 11, name: 'Aloo Gobi', description: 'Potato and cauliflower tempered with cumin and turmeric', price: 13.99, category_id: 2, is_vegetarian: true, spice_level: 'mild' },
-  { id: 12, name: 'Butter Chicken', description: 'Tender chicken in rich buttery tomato cream sauce', price: 17.99, category_id: 3, is_vegetarian: false, spice_level: 'mild', is_featured: true },
-  { id: 13, name: 'Lamb Rogan Josh', description: 'Slow-cooked lamb in aromatic Kashmiri spices', price: 19.99, category_id: 3, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 14, name: 'Chicken Vindaloo', description: 'Fiery Goan-style chicken curry with potatoes', price: 17.99, category_id: 3, is_vegetarian: false, spice_level: 'extra_hot' },
-  { id: 15, name: 'Goat Curry', description: 'Traditional goat curry slow-cooked with whole spices', price: 19.99, category_id: 3, is_vegetarian: false, spice_level: 'medium' },
-  { id: 16, name: 'Prawn Masala', description: 'Jumbo prawns in a spiced onion-tomato gravy', price: 21.99, category_id: 3, is_vegetarian: false, spice_level: 'medium' },
-  { id: 17, name: 'Tandoori Chicken', description: 'Half chicken marinated overnight, roasted in clay oven', price: 18.99, category_id: 4, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 18, name: 'Seekh Kebab', description: 'Minced lamb skewers with herbs, grilled in tandoor', price: 16.99, category_id: 4, is_vegetarian: false, spice_level: 'medium' },
-  { id: 19, name: 'Paneer Tikka', description: 'Marinated cottage cheese grilled with bell peppers', price: 15.99, category_id: 4, is_vegetarian: true, spice_level: 'mild' },
-  { id: 20, name: 'Lamb Chops', description: 'Premium lamb chops marinated in royal spice blend', price: 24.99, category_id: 4, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 21, name: 'Chilli Chicken', description: 'Indo-Chinese style chicken with peppers and soy', price: 16.99, category_id: 5, is_vegetarian: false, spice_level: 'hot' },
-  { id: 22, name: 'Hakka Noodles', description: 'Stir-fried noodles with vegetables and Indo-Chinese sauces', price: 14.99, category_id: 5, is_vegetarian: true, spice_level: 'medium' },
-  { id: 23, name: 'Manchurian', description: 'Vegetable dumplings in tangy Manchurian sauce', price: 13.99, category_id: 5, is_vegetarian: true, spice_level: 'medium' },
-  { id: 24, name: 'Chicken Biryani', description: 'Fragrant basmati rice layered with spiced chicken', price: 18.99, category_id: 6, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 25, name: 'Lamb Biryani', description: 'Aromatic basmati rice with tender spiced lamb', price: 20.99, category_id: 6, is_vegetarian: false, spice_level: 'medium', is_featured: true },
-  { id: 26, name: 'Vegetable Biryani', description: 'Fragrant rice with seasonal vegetables and saffron', price: 15.99, category_id: 6, is_vegetarian: true, spice_level: 'mild' },
-  { id: 27, name: 'Goat Biryani', description: 'Traditional Hyderabadi-style goat biryani', price: 21.99, category_id: 6, is_vegetarian: false, spice_level: 'medium' },
-  { id: 28, name: 'Butter Naan', description: 'Soft leavened bread brushed with butter', price: 3.49, category_id: 7, is_vegetarian: true, spice_level: 'mild' },
-  { id: 29, name: 'Garlic Naan', description: 'Naan topped with fresh garlic and cilantro', price: 3.99, category_id: 7, is_vegetarian: true, spice_level: 'mild', is_featured: true },
-  { id: 30, name: 'Peshawari Naan', description: 'Sweet naan stuffed with nuts and raisins', price: 4.99, category_id: 7, is_vegetarian: true, spice_level: 'mild' },
-  { id: 31, name: 'Tandoori Roti', description: 'Whole wheat bread baked in tandoor', price: 2.99, category_id: 7, is_vegetarian: true, spice_level: 'mild' },
-  { id: 32, name: 'Cheese Naan', description: 'Naan stuffed with melted mozzarella cheese', price: 4.99, category_id: 7, is_vegetarian: true, spice_level: 'mild' },
-  { id: 33, name: 'Gulab Jamun', description: 'Warm milk dumplings soaked in rose-scented syrup', price: 6.99, category_id: 8, is_vegetarian: true, spice_level: 'mild', is_featured: true },
-  { id: 34, name: 'Rasmalai', description: 'Soft cottage cheese patties in saffron cream', price: 7.99, category_id: 8, is_vegetarian: true, spice_level: 'mild' },
-  { id: 35, name: 'Kheer', description: 'Traditional Indian rice pudding with nuts', price: 6.99, category_id: 8, is_vegetarian: true, spice_level: 'mild' },
-  { id: 36, name: 'Mango Lassi', description: 'Sweet yogurt smoothie with Alphonso mango', price: 5.99, category_id: 9, is_vegetarian: true, spice_level: 'mild', is_featured: true },
-  { id: 37, name: 'Masala Chai', description: 'Spiced Indian tea with cardamom and ginger', price: 3.99, category_id: 9, is_vegetarian: true, spice_level: 'mild' },
-  { id: 38, name: 'Sweet Lassi', description: 'Traditional sweet yogurt drink', price: 4.99, category_id: 9, is_vegetarian: true, spice_level: 'mild' },
-];
+function numericId(value, fallbackSeed) {
+  const raw = String(value ?? '').trim();
+  if (/^\d+$/.test(raw)) return Number(raw);
+
+  const source = raw || String(fallbackSeed || '0');
+  let hash = 0;
+  for (let i = 0; i < source.length; i += 1) {
+    hash = ((hash << 5) - hash) + source.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return Math.abs(hash) + 1;
+}
+
+function toArray(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'object') return Object.values(value);
+  return [];
+}
+
+function getCloverImageUrl(item) {
+  const primaryImage = Array.isArray(item.images) ? item.images[0] : null;
+  const source = primaryImage?.source || item.imageUrl || item.image_url || '';
+  if (!source) return null;
+
+  if (source.startsWith('http://') || source.startsWith('https://')) return source;
+  if (source.startsWith('//')) return `https:${source}`;
+  return source;
+}
+
+async function fetchCloverMenuData() {
+  const response = await fetch(CLOVER_MENU_URL);
+  if (!response.ok) {
+    throw new Error(`Clover menu fetch failed with status ${response.status}`);
+  }
+
+  const raw = await response.json();
+  const rawCategories = toArray(raw.categories);
+  const rawItems = toArray(raw.items);
+  const rawItemById = new Map(rawItems.map(item => [String(item.id), item]));
+
+  const normalizedCategories = rawCategories
+    .map((category, index) => ({
+      id: numericId(category.id, `cat-${index}`),
+      name: category.name || 'Menu',
+      slug: String(category.name || 'menu').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      sort_order: Number(category.sortOrder ?? category.sort_order ?? index + 1),
+      source_id: String(category.id),
+      item_ids: Array.isArray(category.items) ? category.items.map(String) : [],
+    }))
+    .sort((a, b) => a.sort_order - b.sort_order);
+
+  const categoryIdMap = new Map(normalizedCategories.map(category => [category.source_id, category.id]));
+  const normalizedItems = [];
+
+  normalizedCategories.forEach((category) => {
+    category.item_ids.forEach((itemId, itemIndex) => {
+      const item = rawItemById.get(itemId);
+      if (!item || item.available === false) return;
+
+      normalizedItems.push({
+        id: numericId(item.id, `item-${category.id}-${itemIndex}`),
+        source_id: String(item.id),
+        name: item.name || 'Menu Item',
+        description: item.description || '',
+        price: Number(item.price || 0) / 100,
+        image_url: getCloverImageUrl(item),
+        images: toArray(item.images),
+        category_id: category.id,
+        category_name: category.name,
+        is_vegetarian: Boolean(item.isVegetarian ?? item.vegetarian ?? item.is_vegeterian),
+        spice_level: normalizeSpiceLevel(item.spiceLevel || item.spice_level),
+        is_featured: Boolean(item.isFeatured ?? item.featured),
+      });
+    });
+  });
+
+  rawItems.forEach((item, index) => {
+    const alreadyIncluded = normalizedItems.some(normalized => normalized.source_id === String(item.id));
+    if (alreadyIncluded || item.available === false) return;
+
+    const itemCategorySourceId = String(item.categoryId || item.category_id || '');
+    const categoryId = categoryIdMap.get(itemCategorySourceId) || normalizedCategories[0]?.id || 1;
+    const categoryName = normalizedCategories.find(category => category.id === categoryId)?.name || 'Menu';
+
+    normalizedItems.push({
+      id: numericId(item.id, `item-fallback-${index}`),
+      source_id: String(item.id),
+      name: item.name || 'Menu Item',
+      description: item.description || '',
+      price: Number(item.price || 0) / 100,
+      image_url: getCloverImageUrl(item),
+      images: toArray(item.images),
+      category_id: categoryId,
+      category_name: categoryName,
+      is_vegetarian: Boolean(item.isVegetarian ?? item.vegetarian ?? item.is_vegeterian),
+      spice_level: normalizeSpiceLevel(item.spiceLevel || item.spice_level),
+      is_featured: Boolean(item.isFeatured ?? item.featured),
+    });
+  });
+
+  return {
+    categories: normalizedCategories.map(({ source_id, item_ids, ...category }) => category),
+    items: normalizedItems,
+  };
+}
 
 let mockReservations = [
   { id: 1, restaurant_id: 1, name: 'John Smith', email: 'john@example.com', phone: '613-555-1234', date: '2026-03-10', time: '19:00', persons: 4, special_requests: 'Window seat please', status: 'confirmed', confirmation_code: 'MAS-001', created_at: '2026-03-05T10:00:00' },
@@ -272,7 +336,13 @@ app.get('/api/categories', async (req, res) => {
       return res.json(rows);
     } catch (err) { console.error(err); }
   }
-  res.json(mockCategories);
+  try {
+    const cloverMenu = await fetchCloverMenuData();
+    return res.json(cloverMenu.categories);
+  } catch (err) {
+    console.error('Clover categories fetch failed:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch categories from Clover' });
+  }
 });
 
 app.get('/api/menu', async (req, res) => {
@@ -288,11 +358,22 @@ app.get('/api/menu', async (req, res) => {
       return res.json(rows);
     } catch (err) { console.error(err); }
   }
-  let items = [...mockMenuItems];
-  if (category) items = items.filter(i => i.category_id === parseInt(category));
-  if (featured === 'true') items = items.filter(i => i.is_featured);
-  items = items.map(i => ({ ...i, category_name: mockCategories.find(c => c.id === i.category_id)?.name }));
-  res.json(items);
+
+  try {
+    const cloverMenu = await fetchCloverMenuData();
+    let items = [...cloverMenu.items];
+
+    if (category) {
+      const categoryId = parseInt(category, 10);
+      items = items.filter(item => item.category_id === categoryId);
+    }
+    if (featured === 'true') items = items.filter(item => item.is_featured);
+
+    return res.json(items);
+  } catch (err) {
+    console.error('Clover menu fetch failed:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch menu from Clover' });
+  }
 });
 
 app.get('/api/menu/:id', async (req, res) => {
@@ -302,8 +383,16 @@ app.get('/api/menu/:id', async (req, res) => {
       if (rows.length) return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
-  const item = mockMenuItems.find(i => i.id === parseInt(req.params.id));
-  item ? res.json(item) : res.status(404).json({ error: 'Not found' });
+
+  try {
+    const cloverMenu = await fetchCloverMenuData();
+    const id = parseInt(req.params.id, 10);
+    const item = cloverMenu.items.find(menuItem => menuItem.id === id);
+    return item ? res.json(item) : res.status(404).json({ error: 'Not found' });
+  } catch (err) {
+    console.error('Clover menu item fetch failed:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch menu item from Clover' });
+  }
 });
 
 app.post('/api/menu', authMiddleware, async (req, res) => {
@@ -318,9 +407,7 @@ app.post('/api/menu', authMiddleware, async (req, res) => {
       return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
-  const newItem = { id: mockMenuItems.length + 1, name, description, price: parseFloat(price), category_id: parseInt(category_id), is_vegetarian: is_vegetarian || false, spice_level: spice_level || 'medium', is_featured: is_featured || false };
-  mockMenuItems.push(newItem);
-  res.json(newItem);
+  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
 
 app.put('/api/menu/:id', authMiddleware, async (req, res) => {
@@ -335,12 +422,7 @@ app.put('/api/menu/:id', authMiddleware, async (req, res) => {
       return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
-  const idx = mockMenuItems.findIndex(i => i.id === parseInt(req.params.id));
-  if (idx !== -1) {
-    mockMenuItems[idx] = { ...mockMenuItems[idx], name, description, price: parseFloat(price), category_id: parseInt(category_id), is_vegetarian, spice_level, is_featured };
-    return res.json(mockMenuItems[idx]);
-  }
-  res.status(404).json({ error: 'Not found' });
+  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
 
 app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
@@ -350,9 +432,7 @@ app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
       return res.json({ success: true });
     } catch (err) { console.error(err); }
   }
-  const idx = mockMenuItems.findIndex(i => i.id === parseInt(req.params.id));
-  if (idx !== -1) { mockMenuItems.splice(idx, 1); return res.json({ success: true }); }
-  res.status(404).json({ error: 'Not found' });
+  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
 
 // --- Reservations ---
@@ -508,12 +588,20 @@ app.get('/api/analytics/overview', authMiddleware, async (req, res) => {
     name: r.name.replace('Masakali Indian Cuisine – ', '').replace('Masakali ', ''),
     count: mockReservations.filter(res => res.restaurant_id === r.id).length,
   }));
+  let totalMenuItems = 0;
+  try {
+    const cloverMenu = await fetchCloverMenuData();
+    totalMenuItems = cloverMenu.items.length;
+  } catch (err) {
+    console.error('Clover menu count fetch failed:', err.message);
+  }
+
   res.json({
     totalReservations: mockReservations.length,
     confirmedReservations: mockReservations.filter(r => r.status === 'confirmed').length,
     todayReservations: mockReservations.filter(r => r.date === new Date().toISOString().split('T')[0]).length,
     totalCateringRequests: mockCateringRequests.length,
-    totalMenuItems: mockMenuItems.length,
+    totalMenuItems,
     branchStats,
     peakDays: [
       { day: 'Friday', reservations: 45 },

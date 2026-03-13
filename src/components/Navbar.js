@@ -31,9 +31,8 @@ export default function Navbar() {
   }, [location]);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      scrolled ? 'bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800/50 shadow-sm dark:shadow-none' : 'bg-transparent'
-    }`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800/50 shadow-sm dark:shadow-none' : 'bg-transparent'
+      }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
@@ -57,11 +56,10 @@ export default function Navbar() {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${
-                  location.pathname === link.path
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300 ${location.pathname === link.path
                     ? 'text-amber-600 dark:text-amber-400 bg-amber-400/10'
                     : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
-                }`}
+                  }`}
               >
                 {link.name}
               </Link>
@@ -112,11 +110,10 @@ export default function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`block px-4 py-3 rounded-lg text-base transition-all ${
-                    location.pathname === link.path
+                  className={`block px-4 py-3 rounded-lg text-base transition-all ${location.pathname === link.path
                       ? 'text-amber-600 dark:text-amber-400 bg-amber-400/10'
                       : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-white/5'
-                  }`}
+                    }`}
                 >
                   {link.name}
                 </Link>

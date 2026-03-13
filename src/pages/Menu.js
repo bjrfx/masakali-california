@@ -20,6 +20,11 @@ const spiceColors = {
   extra_hot: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', label: 'Extra Hot' },
 };
 
+function getItemImageUrl(item) {
+  const firstImage = Array.isArray(item.images) ? item.images[0]?.source : null;
+  return firstImage || item.image_url || null;
+}
+
 export default function Menu() {
   const [categories, setCategories] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
@@ -27,6 +32,7 @@ export default function Menu() {
   const [search, setSearch] = useState('');
   const [vegOnly, setVegOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [brokenImages, setBrokenImages] = useState({});
 
   useEffect(() => {
     Promise.all([api.getCategories(), api.getMenu()])
@@ -72,7 +78,7 @@ export default function Menu() {
               Explore Our <span className="text-gold-gradient">Flavors</span>
             </h1>
             <p className="text-neutral-600 dark:text-neutral-400 text-lg max-w-2xl">
-              Discover our carefully curated menu featuring authentic Indian dishes, 
+              Discover our carefully curated menu featuring authentic Indian dishes,
               from classic curries to innovative creations.
             </p>
           </AnimatedSection>
@@ -99,9 +105,8 @@ export default function Menu() {
               {/* Veg filter */}
               <button
                 onClick={() => setVegOnly(!vegOnly)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  vegOnly ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700'
-                }`}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${vegOnly ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700'
+                  }`}
               >
                 <Leaf size={16} /> Vegetarian
               </button>
@@ -110,9 +115,8 @@ export default function Menu() {
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 <button
                   onClick={() => setActiveCategory(null)}
-                  className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    !activeCategory ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
-                  }`}
+                  className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${!activeCategory ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
+                    }`}
                 >
                   All
                 </button>
@@ -120,9 +124,8 @@ export default function Menu() {
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                    className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                      activeCategory === cat.id ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
-                    }`}
+                    className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeCategory === cat.id ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
+                      }`}
                   >
                     {cat.name}
                   </button>
@@ -170,12 +173,25 @@ export default function Menu() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {category.items.map((item, i) => {
                     const spice = spiceColors[item.spice_level] || spiceColors.medium;
+                    const imageUrl = getItemImageUrl(item);
+                    const hasImage = Boolean(imageUrl) && !brokenImages[item.id];
                     return (
                       <AnimatedSection key={item.id} delay={Math.min(i * 0.05, 0.3)}>
                         <div className="group bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden card-hover gold-glow-hover shadow-sm dark:shadow-none">
                           {/* Image placeholder */}
                           <div className="h-44 bg-gradient-to-br from-amber-100 dark:from-amber-900/20 to-neutral-100 dark:to-neutral-900 flex items-center justify-center relative">
-                            <ChefHat size={40} className="text-amber-500/20 group-hover:text-amber-400/40 transition-colors" />
+                            {hasImage ? (
+                              <img
+                                src={imageUrl}
+                                alt={item.name}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover"
+                                onError={() => setBrokenImages(prev => ({ ...prev, [item.id]: true }))}
+                              />
+                            ) : (
+                              <ChefHat size={40} className="text-amber-500/20 group-hover:text-amber-400/40 transition-colors" />
+                            )}
                             {item.is_featured && (
                               <span className="absolute top-3 right-3 px-2 py-1 bg-amber-500 text-black text-xs font-bold rounded-full">
                                 ★ Featured
