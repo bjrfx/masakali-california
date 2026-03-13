@@ -1,0 +1,66 @@
+const API_BASE = '/api';
+
+async function apiCall(endpoint, options = {}) {
+  const token = localStorage.getItem('adminToken');
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (token && options.auth !== false) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminData');
+    window.location.href = '/admin/login';
+    throw new Error('Unauthorized');
+  }
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'API Error');
+  return data;
+}
+
+export const api = {
+  // Auth
+  login: (email, password) => apiCall('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }), auth: false }),
+
+  // Restaurants
+  getRestaurants: () => apiCall('/restaurants', { auth: false }),
+  getRestaurant: (slug) => apiCall(`/restaurants/${slug}`, { auth: false }),
+
+  // Menu
+  getCategories: () => apiCall('/categories', { auth: false }),
+  getMenu: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/menu${query ? `?${query}` : ''}`, { auth: false });
+  },
+  getMenuItem: (id) => apiCall(`/menu/${id}`, { auth: false }),
+  createMenuItem: (data) => apiCall('/menu', { method: 'POST', body: JSON.stringify(data) }),
+  updateMenuItem: (id, data) => apiCall(`/menu/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteMenuItem: (id) => apiCall(`/menu/${id}`, { method: 'DELETE' }),
+
+  // Reservations
+  getReservations: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/reservations${query ? `?${query}` : ''}`);
+  },
+  createReservation: (data) => apiCall('/reservations', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  updateReservation: (id, data) => apiCall(`/reservations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteReservation: (id) => apiCall(`/reservations/${id}`, { method: 'DELETE' }),
+
+  // Catering
+  submitCatering: (data) => apiCall('/catering', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  getCateringRequests: () => apiCall('/catering'),
+
+  // Contact
+  submitContact: (data) => apiCall('/contact', { method: 'POST', body: JSON.stringify(data), auth: false }),
+
+  // Analytics
+  getAnalytics: () => apiCall('/analytics/overview'),
+};
+
+export default api;
