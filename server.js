@@ -17,7 +17,7 @@ try { require('dotenv').config(); } catch (e) { }
 const app = express();
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'masakali_secret_2024';
-const CLOVER_MENU_URL = process.env.CLOVER_MENU_URL || 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV7NPE1/menu?orderType=PICKUP';
+const CLOVER_MENU_URL = 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV7NPE1/menu?orderType=PICKUP';
 
 // =====================================================
 // Middleware
