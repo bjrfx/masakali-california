@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, UtensilsCrossed, CalendarDays, BarChart3, LogOut, Menu, X, ChefHat, Settings } from 'lucide-react';
+import { LayoutDashboard, UtensilsCrossed, CalendarDays, BarChart3, LogOut, Menu, X, ChefHat, Users, MessageSquare } from 'lucide-react';
 
 const sidebarLinks = [
   { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
   { name: 'Menu Management', path: '/admin/menu', icon: UtensilsCrossed },
   { name: 'Reservations', path: '/admin/reservations', icon: CalendarDays },
+  { name: 'Catering', path: '/admin/catering', icon: Users },
+  { name: 'Contact', path: '/admin/contact', icon: MessageSquare },
   { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
 ];
 

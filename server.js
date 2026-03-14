@@ -48,6 +48,7 @@ async function initDB() {
       password: process.env.DB_PASS || 'K143iran',
       database: process.env.DB_NAME || 'masakali_california',
       port: parseInt(process.env.DB_PORT || '3306', 10),
+      connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '8000', 10),
       waitForConnections: true,
       connectionLimit: 10,
     });
@@ -428,8 +429,14 @@ let mockCateringRequests = [
   { id: 2, name: 'Anita Desai', email: 'anita@example.com', phone: '613-555-2222', event_date: '2026-05-20', guests: 200, event_location: 'Hilton Garden Inn', event_type: 'Wedding', notes: 'Vegetarian and non-vegetarian options', status: 'new', created_at: '2026-03-05T14:00:00' },
 ];
 
+let mockContactInquiries = [
+  { id: 1, name: 'Alex Martin', email: 'alex@example.com', phone: '14375550111', subject: 'reservation', message: 'Can we seat 12 people together?', restaurant_id: 6, is_read: false, created_at: '2026-03-09T10:20:00' },
+  { id: 2, name: 'Priyanka Shah', email: 'priyanka@example.com', phone: '15145559876', subject: 'feedback', message: 'Loved the butter chicken!', restaurant_id: 6, is_read: true, created_at: '2026-03-10T08:15:00' },
+];
+
 let nextReservationId = 9;
 let nextCateringId = 3;
+let nextContactId = 3;
 
 // =====================================================
 // Email Transporter
@@ -948,6 +955,58 @@ app.get('/api/catering', authMiddleware, async (req, res) => {
   res.json(mockCateringRequests);
 });
 
+app.put('/api/catering/:id', authMiddleware, async (req, res) => {
+  const { status, event_date, guests, event_location, event_type, notes } = req.body;
+  if (db) {
+    try {
+      await db.query(
+        `UPDATE catering_requests
+         SET status = COALESCE(?, status),
+             event_date = COALESCE(?, event_date),
+             guests = COALESCE(?, guests),
+             event_location = COALESCE(?, event_location),
+             event_type = COALESCE(?, event_type),
+             notes = COALESCE(?, notes),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [status || null, event_date || null, guests || null, event_location || null, event_type || null, notes || null, req.params.id]
+      );
+      const [rows] = await db.query('SELECT * FROM catering_requests WHERE id = ?', [req.params.id]);
+      if (!rows.length) return res.status(404).json({ error: 'Not found' });
+      return res.json(rows[0]);
+    } catch (err) { console.error(err); }
+  }
+
+  const idx = mockCateringRequests.findIndex(c => c.id === parseInt(req.params.id, 10));
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  mockCateringRequests[idx] = {
+    ...mockCateringRequests[idx],
+    ...(status ? { status } : {}),
+    ...(event_date ? { event_date } : {}),
+    ...(guests ? { guests: parseInt(guests, 10) } : {}),
+    ...(event_location ? { event_location } : {}),
+    ...(event_type ? { event_type } : {}),
+    ...(notes ? { notes } : {}),
+  };
+  return res.json(mockCateringRequests[idx]);
+});
+
+app.delete('/api/catering/:id', authMiddleware, async (req, res) => {
+  if (db) {
+    try {
+      await db.query('DELETE FROM catering_requests WHERE id = ?', [req.params.id]);
+      return res.json({ success: true });
+    } catch (err) { console.error(err); }
+  }
+
+  const idx = mockCateringRequests.findIndex(c => c.id === parseInt(req.params.id, 10));
+  if (idx !== -1) {
+    mockCateringRequests.splice(idx, 1);
+    return res.json({ success: true });
+  }
+  return res.status(404).json({ error: 'Not found' });
+});
+
 // --- Contact ---
 app.post('/api/contact', async (req, res) => {
   const { name, email, phone, subject, message, restaurant_id } = req.body;
@@ -1015,7 +1074,75 @@ app.post('/api/contact', async (req, res) => {
       return res.json({ success: true, id: result.insertId });
     } catch (err) { console.error(err); }
   }
-  res.json({ success: true, message: 'Inquiry received' });
+  const newInquiry = {
+    id: nextContactId++,
+    name,
+    email,
+    phone: phone || null,
+    subject: subject || null,
+    message,
+    restaurant_id: restaurant_id || null,
+    is_read: false,
+    ...requestContext,
+    created_at: new Date().toISOString(),
+  };
+  mockContactInquiries.push(newInquiry);
+  res.json({ success: true, id: newInquiry.id });
+});
+
+app.get('/api/contact', authMiddleware, async (req, res) => {
+  if (db) {
+    try {
+      const [rows] = await db.query('SELECT * FROM contact_inquiries ORDER BY created_at DESC');
+      return res.json(rows);
+    } catch (err) { console.error(err); }
+  }
+  return res.json(mockContactInquiries);
+});
+
+app.put('/api/contact/:id', authMiddleware, async (req, res) => {
+  const { is_read, subject, message } = req.body;
+  if (db) {
+    try {
+      await db.query(
+        `UPDATE contact_inquiries
+         SET is_read = COALESCE(?, is_read),
+             subject = COALESCE(?, subject),
+             message = COALESCE(?, message)
+         WHERE id = ?`,
+        [typeof is_read === 'boolean' ? is_read : null, subject || null, message || null, req.params.id]
+      );
+      const [rows] = await db.query('SELECT * FROM contact_inquiries WHERE id = ?', [req.params.id]);
+      if (!rows.length) return res.status(404).json({ error: 'Not found' });
+      return res.json(rows[0]);
+    } catch (err) { console.error(err); }
+  }
+
+  const idx = mockContactInquiries.findIndex(c => c.id === parseInt(req.params.id, 10));
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  mockContactInquiries[idx] = {
+    ...mockContactInquiries[idx],
+    ...(typeof is_read === 'boolean' ? { is_read } : {}),
+    ...(subject ? { subject } : {}),
+    ...(message ? { message } : {}),
+  };
+  return res.json(mockContactInquiries[idx]);
+});
+
+app.delete('/api/contact/:id', authMiddleware, async (req, res) => {
+  if (db) {
+    try {
+      await db.query('DELETE FROM contact_inquiries WHERE id = ?', [req.params.id]);
+      return res.json({ success: true });
+    } catch (err) { console.error(err); }
+  }
+
+  const idx = mockContactInquiries.findIndex(c => c.id === parseInt(req.params.id, 10));
+  if (idx !== -1) {
+    mockContactInquiries.splice(idx, 1);
+    return res.json({ success: true });
+  }
+  return res.status(404).json({ error: 'Not found' });
 });
 
 // --- Analytics ---
@@ -1108,11 +1235,19 @@ app.get('*', (req, res) => {
 // =====================================================
 // Start Server
 // =====================================================
-initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🍛 Masakali Restaurant Group Server`);
-    console.log(`   Running on port ${PORT}`);
-    console.log(`   Database: ${db ? 'MySQL Connected' : 'Mock Data Mode'}`);
-    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
-  });
+app.listen(PORT, () => {
+  console.log(`\n🍛 Masakali Restaurant Group Server`);
+  console.log(`   Running on port ${PORT}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('   Database: Initializing...\n');
 });
+
+(async () => {
+  try {
+    await initDB();
+  } catch (err) {
+    console.log(`✗ Database init failed, using mock data: ${err.message}`);
+    db = null;
+  }
+  console.log(`   Database Mode: ${db ? 'MySQL Connected' : 'Mock Data Mode'}`);
+})();

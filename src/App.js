@@ -15,6 +15,8 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminMenuManagement from './pages/admin/MenuManagement';
 import AdminReservations from './pages/admin/ReservationManagement';
 import AdminAnalytics from './pages/admin/Analytics';
+import AdminCateringManagement from './pages/admin/CateringManagement';
+import AdminContactManagement from './pages/admin/ContactManagement';
 import AdminLayout from './components/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -90,6 +92,20 @@ function App() {
             <ProtectedRoute>
               <AdminLayout admin={admin} onLogout={handleLogout}>
                 <AdminReservations token={adminToken} />
+              </AdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/catering" element={
+            <ProtectedRoute>
+              <AdminLayout admin={admin} onLogout={handleLogout}>
+                <AdminCateringManagement token={adminToken} />
+              </AdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/contact" element={
+            <ProtectedRoute>
+              <AdminLayout admin={admin} onLogout={handleLogout}>
+                <AdminContactManagement token={adminToken} />
               </AdminLayout>
             </ProtectedRoute>
           } />

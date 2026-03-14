@@ -55,9 +55,14 @@ export const api = {
   // Catering
   submitCatering: (data) => apiCall('/catering', { method: 'POST', body: JSON.stringify(data), auth: false }),
   getCateringRequests: () => apiCall('/catering'),
+  updateCateringRequest: (id, data) => apiCall(`/catering/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCateringRequest: (id) => apiCall(`/catering/${id}`, { method: 'DELETE' }),
 
   // Contact
   submitContact: (data) => apiCall('/contact', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  getContactInquiries: () => apiCall('/contact'),
+  updateContactInquiry: (id, data) => apiCall(`/contact/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContactInquiry: (id) => apiCall(`/contact/${id}`, { method: 'DELETE' }),
 
   // Analytics
   getAnalytics: () => apiCall('/analytics/overview'),

@@ -26,16 +26,32 @@ export default function Catering() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(''); };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, phone: digitsOnly });
+      setError('');
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
+    setError('');
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.event_date || !form.guests) { setError('Please fill in all required fields.'); return; }
+    if (!/^\d{10}$/.test(form.phone)) { setError('Phone number must be exactly 10 digits.'); return; }
     setSubmitting(true);
     try {
+      const payload = {
+        ...form,
+        phone: `1${form.phone}`,
+      };
       const response = await fetch('/api/catering', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Failed to submit request.');
@@ -108,7 +124,7 @@ export default function Catering() {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Full Name *</label><input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your name" className="input-dark" required /></div>
                     <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Email Address *</label><input type="email" name="email" value={form.email} onChange={handleChange} placeholder="your@email.com" className="input-dark" required /></div>
-                    <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Phone Number *</label><input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="(613) 555-0000" className="input-dark" required /></div>
+                    <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Phone Number *</label><input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="4373761995" className="input-dark" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} minLength={10} required /></div>
                     <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Event Type</label><select name="event_type" value={form.event_type} onChange={handleChange} className="select-dark"><option value="">Select type</option>{eventTypes.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                     <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Event Date *</label><input type="date" name="event_date" value={form.event_date} onChange={handleChange} min={today} className="input-dark" required /></div>
                     <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Number of Guests *</label><input type="number" name="guests" value={form.guests} onChange={handleChange} min="10" placeholder="Estimated" className="input-dark" required /></div>

@@ -101,6 +101,8 @@ export default function AdminDashboard({ token }) {
         {[
           { label: 'Manage Menu', path: '/admin/menu', icon: UtensilsCrossed, desc: 'Add, edit, delete items' },
           { label: 'Reservations', path: '/admin/reservations', icon: CalendarDays, desc: 'View & manage bookings' },
+          { label: 'Catering', path: '/admin/catering', icon: Users, desc: 'Manage catering requests' },
+          { label: 'Contact', path: '/admin/contact', icon: MapPin, desc: 'Manage contact inquiries' },
           { label: 'Analytics', path: '/admin/analytics', icon: BarChart3, desc: 'Performance insights' },
           { label: 'View Website', path: '/', icon: ArrowUpRight, desc: 'See public website' },
         ].map((action) => {
