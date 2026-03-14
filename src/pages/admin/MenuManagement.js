@@ -16,6 +16,12 @@ export default function AdminMenuManagement({ token }) {
   const emptyForm = { name: '', description: '', price: '', category_id: '', is_vegetarian: false, spice_level: 'medium', is_featured: false };
   const [form, setForm] = useState(emptyForm);
 
+  const normalizeId = (value) => String(value ?? '');
+  const formatPrice = (value) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number.toFixed(2) : '0.00';
+  };
+
   const loadData = async ({ showLoader = false } = {}) => {
     if (showLoader) setLoading(true);
     try {
@@ -36,10 +42,46 @@ export default function AdminMenuManagement({ token }) {
   }, []);
   const handleChange = (e) => { const { name, value, type, checked } = e.target; setForm({ ...form, [name]: type === 'checkbox' ? checked : value }); };
   const openCreate = () => { setEditItem(null); setForm(emptyForm); setShowModal(true); };
-  const openEdit = (item) => { setEditItem(item); setForm({ name: item.name, description: item.description || '', price: item.price?.toString() || '', category_id: item.category_id?.toString() || '', is_vegetarian: item.is_vegetarian || false, spice_level: item.spice_level || 'medium', is_featured: item.is_featured || false }); setShowModal(true); };
-  const handleSave = async (e) => { e.preventDefault(); if (!form.name || !form.price || !form.category_id) return; setSaving(true); try { const payload = { ...form, price: parseFloat(form.price), category_id: parseInt(form.category_id) }; if (editItem) { const updated = await api.updateMenuItem(editItem.id, payload); setMenuItems(menuItems.map(i => i.id === editItem.id ? { ...i, ...updated, category_name: categories.find(c => c.id === parseInt(form.category_id))?.name } : i)); } else { const created = await api.createMenuItem(payload); created.category_name = categories.find(c => c.id === parseInt(form.category_id))?.name; setMenuItems([...menuItems, created]); } setShowModal(false); } catch (err) { console.error(err); } setSaving(false); };
-  const handleDelete = async (id) => { try { await api.deleteMenuItem(id); setMenuItems(menuItems.filter(i => i.id !== id)); setDeleteConfirm(null); } catch (err) { console.error(err); } };
-  const filtered = menuItems.filter(item => { if (filterCategory && item.category_id !== parseInt(filterCategory)) return false; if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false; return true; });
+  const openEdit = (item) => { setEditItem(item); setForm({ name: item.name, description: item.description || '', price: item.price?.toString() || '', category_id: normalizeId(item.category_id), is_vegetarian: item.is_vegetarian || false, spice_level: item.spice_level || 'medium', is_featured: item.is_featured || false }); setShowModal(true); };
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.price || !form.category_id) return;
+    setSaving(true);
+    try {
+      const payload = {
+        ...form,
+        price: Number(form.price),
+        category_id: normalizeId(form.category_id),
+      };
+      const selectedCategoryName = categories.find(c => normalizeId(c.id) === normalizeId(form.category_id))?.name;
+
+      if (editItem) {
+        const updated = await api.updateMenuItem(editItem.id, payload);
+        setMenuItems(menuItems.map(i => normalizeId(i.id) === normalizeId(editItem.id) ? { ...i, ...updated, category_name: updated.category_name || selectedCategoryName } : i));
+      } else {
+        const created = await api.createMenuItem(payload);
+        created.category_name = created.category_name || selectedCategoryName;
+        setMenuItems([...menuItems, created]);
+      }
+      setShowModal(false);
+    } catch (err) {
+      console.error(err);
+      window.alert(err.message || 'Unable to save menu item');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const handleDelete = async (id) => {
+    try {
+      await api.deleteMenuItem(id);
+      setMenuItems(menuItems.filter(i => normalizeId(i.id) !== normalizeId(id)));
+      setDeleteConfirm(null);
+    } catch (err) {
+      console.error(err);
+      window.alert(err.message || 'Unable to delete menu item');
+    }
+  };
+  const filtered = menuItems.filter(item => { if (filterCategory && normalizeId(item.category_id) !== normalizeId(filterCategory)) return false; if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false; return true; });
   const spiceColors = { mild: 'text-green-500 dark:text-green-400 bg-green-500/10', medium: 'text-yellow-500 dark:text-yellow-400 bg-yellow-500/10', hot: 'text-orange-500 dark:text-orange-400 bg-orange-500/10', extra_hot: 'text-red-500 dark:text-red-400 bg-red-500/10' };
 
   if (loading) return <div className="space-y-4"><div className="skeleton h-10 w-1/3 mb-6" />{[...Array(8)].map((_, i) => <div key={i} className="skeleton h-16 w-full mb-2" />)}</div>;
@@ -70,8 +112,8 @@ export default function AdminMenuManagement({ token }) {
               {filtered.map((item) => (
                 <tr key={item.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                   <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0"><ChefHat size={16} className="text-amber-500 dark:text-amber-400" /></div><div><p className="text-neutral-900 dark:text-white text-sm font-medium">{item.name}</p><p className="text-neutral-500 text-xs truncate max-w-[200px]">{item.description}</p></div></div></td>
-                  <td className="px-6 py-4 hidden md:table-cell"><span className="text-neutral-600 dark:text-neutral-400 text-sm">{item.category_name || categories.find(c => c.id === item.category_id)?.name}</span></td>
-                  <td className="px-6 py-4"><span className="text-amber-500 dark:text-amber-400 font-semibold">${item.price?.toFixed(2)}</span></td>
+                  <td className="px-6 py-4 hidden md:table-cell"><span className="text-neutral-600 dark:text-neutral-400 text-sm">{item.category_name || categories.find(c => normalizeId(c.id) === normalizeId(item.category_id))?.name}</span></td>
+                  <td className="px-6 py-4"><span className="text-amber-500 dark:text-amber-400 font-semibold">${formatPrice(item.price)}</span></td>
                   <td className="px-6 py-4 hidden lg:table-cell"><div className="flex gap-1.5">{item.is_vegetarian && <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-green-500/10 text-green-500 dark:text-green-400 rounded-full"><Leaf size={10} /> Veg</span>}<span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${spiceColors[item.spice_level] || ''}`}><Flame size={10} /> {item.spice_level}</span>{item.is_featured && <span className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-500 dark:text-amber-400 rounded-full">★ Featured</span>}</div></td>
                   <td className="px-6 py-4 text-right"><div className="flex items-center justify-end gap-2"><button onClick={() => openEdit(item)} className="p-2 text-neutral-400 hover:text-amber-500 dark:hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-all"><Edit3 size={16} /></button><button onClick={() => setDeleteConfirm(item.id)} className="p-2 text-neutral-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 size={16} /></button></div></td>
                 </tr>))}
