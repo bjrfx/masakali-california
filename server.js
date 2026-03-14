@@ -18,6 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'masakali_secret_2024';
 const CLOVER_MENU_URL = 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV7NPE1/menu?orderType=PICKUP';
+const IP_API_BASE_URL = 'http://ip-api.com/json';
 
 // =====================================================
 // Middleware
@@ -25,6 +26,7 @@ const CLOVER_MENU_URL = 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.set('trust proxy', true);
 
 // Serve static files from build directory
 app.use(express.static(path.join(__dirname, 'build')));
@@ -41,14 +43,99 @@ async function initDB() {
   if (!mysql) return;
   try {
     db = await mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASS || '',
-      database: process.env.DB_NAME || 'masakali_db',
+      host: process.env.DB_HOST || 'sv63.ifastnet12.org',
+      user: process.env.DB_USER || 'masakali_kiran',
+      password: process.env.DB_PASS || 'K143iran',
+      database: process.env.DB_NAME || 'masakali_california',
+      port: parseInt(process.env.DB_PORT || '3306', 10),
       waitForConnections: true,
       connectionLimit: 10,
     });
     const [rows] = await db.query('SELECT 1');
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        role ENUM('super_admin', 'branch_admin', 'staff') DEFAULT 'staff',
+        restaurant_id INT NULL,
+        is_active BOOLEAN DEFAULT TRUE,
+        last_login TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    try {
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_latitude DECIMAL(10, 8) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_longitude DECIMAL(11, 8) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_accuracy_meters DECIMAL(10, 2) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_captured_at DATETIME NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_source VARCHAR(50) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS request_ip VARCHAR(45) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS request_user_agent TEXT NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS request_browser VARCHAR(120) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS request_os VARCHAR(120) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS request_device_type VARCHAR(30) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_lookup_status VARCHAR(20) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_lookup_message VARCHAR(255) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_country VARCHAR(100) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_region VARCHAR(100) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_city VARCHAR(100) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_zip VARCHAR(20) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_latitude DECIMAL(10, 8) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_longitude DECIMAL(11, 8) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_timezone VARCHAR(80) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_isp VARCHAR(150) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_org VARCHAR(150) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_as VARCHAR(150) NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_mobile BOOLEAN NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_proxy BOOLEAN NULL');
+      await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS ip_hosting BOOLEAN NULL');
+
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS request_ip VARCHAR(45) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS request_user_agent TEXT NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS request_browser VARCHAR(120) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS request_os VARCHAR(120) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS request_device_type VARCHAR(30) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_lookup_status VARCHAR(20) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_lookup_message VARCHAR(255) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_country VARCHAR(100) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_region VARCHAR(100) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_city VARCHAR(100) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_zip VARCHAR(20) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_latitude DECIMAL(10, 8) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_longitude DECIMAL(11, 8) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_timezone VARCHAR(80) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_isp VARCHAR(150) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_org VARCHAR(150) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_as VARCHAR(150) NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_mobile BOOLEAN NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_proxy BOOLEAN NULL');
+      await db.query('ALTER TABLE catering_requests ADD COLUMN IF NOT EXISTS ip_hosting BOOLEAN NULL');
+
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS request_ip VARCHAR(45) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS request_user_agent TEXT NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS request_browser VARCHAR(120) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS request_os VARCHAR(120) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS request_device_type VARCHAR(30) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_lookup_status VARCHAR(20) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_lookup_message VARCHAR(255) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_country VARCHAR(100) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_region VARCHAR(100) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_city VARCHAR(100) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_zip VARCHAR(20) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_latitude DECIMAL(10, 8) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_longitude DECIMAL(11, 8) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_timezone VARCHAR(80) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_isp VARCHAR(150) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_org VARCHAR(150) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_as VARCHAR(150) NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_mobile BOOLEAN NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_proxy BOOLEAN NULL');
+      await db.query('ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_hosting BOOLEAN NULL');
+    } catch (migrationErr) {
+      console.log('Reservation geolocation columns migration skipped:', migrationErr.message);
+    }
     console.log('✓ MySQL database connected');
   } catch (err) {
     console.log('✗ Database not available, using mock data:', err.message);
@@ -95,6 +182,147 @@ function toArray(value) {
   if (Array.isArray(value)) return value;
   if (typeof value === 'object') return Object.values(value);
   return [];
+}
+
+function parseReservationGeolocation(geolocation) {
+  if (!geolocation || typeof geolocation !== 'object') return null;
+
+  const latitude = Number(geolocation.latitude);
+  const longitude = Number(geolocation.longitude);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+
+  const accuracy = Number(geolocation.accuracy);
+  const capturedAtRaw = geolocation.captured_at || geolocation.capturedAt;
+  const capturedAtDate = capturedAtRaw ? new Date(capturedAtRaw) : null;
+
+  return {
+    latitude,
+    longitude,
+    accuracy: Number.isFinite(accuracy) ? Math.max(accuracy, 0) : null,
+    captured_at: capturedAtDate && !Number.isNaN(capturedAtDate.getTime())
+      ? capturedAtDate.toISOString().slice(0, 19).replace('T', ' ')
+      : null,
+    source: String(geolocation.source || 'browser_geolocation').slice(0, 50),
+  };
+}
+
+function extractClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  const realIp = req.headers['x-real-ip'];
+  const cfIp = req.headers['cf-connecting-ip'];
+  const remoteIp = req.socket?.remoteAddress;
+  const candidate = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]
+    || (Array.isArray(realIp) ? realIp[0] : realIp)
+    || (Array.isArray(cfIp) ? cfIp[0] : cfIp)
+    || remoteIp
+    || req.ip
+    || '';
+
+  const cleaned = String(candidate).trim().replace(/^::ffff:/, '');
+  return cleaned || null;
+}
+
+function isPrivateIp(ip) {
+  if (!ip) return true;
+  const value = String(ip).toLowerCase();
+  if (value === '::1' || value === '127.0.0.1' || value === 'localhost') return true;
+  if (value.startsWith('10.') || value.startsWith('192.168.') || value.startsWith('169.254.')) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(value)) return true;
+  if (value.startsWith('fc') || value.startsWith('fd') || value.startsWith('fe80:')) return true;
+  return false;
+}
+
+function parseUserAgent(ua) {
+  const source = String(ua || '').toLowerCase();
+
+  let browser = 'Unknown';
+  if (source.includes('edg/')) browser = 'Edge';
+  else if (source.includes('opr/') || source.includes('opera')) browser = 'Opera';
+  else if (source.includes('chrome/')) browser = 'Chrome';
+  else if (source.includes('safari/') && !source.includes('chrome/')) browser = 'Safari';
+  else if (source.includes('firefox/')) browser = 'Firefox';
+
+  let os = 'Unknown';
+  if (source.includes('windows nt')) os = 'Windows';
+  else if (source.includes('mac os x')) os = 'macOS';
+  else if (source.includes('android')) os = 'Android';
+  else if (source.includes('iphone') || source.includes('ipad') || source.includes('ios')) os = 'iOS';
+  else if (source.includes('linux')) os = 'Linux';
+
+  let deviceType = 'desktop';
+  if (source.includes('ipad') || source.includes('tablet')) deviceType = 'tablet';
+  else if (source.includes('mobile') || source.includes('iphone') || source.includes('android')) deviceType = 'mobile';
+  if (source.includes('bot') || source.includes('crawler') || source.includes('spider')) deviceType = 'bot';
+
+  return { browser, os, deviceType };
+}
+
+async function lookupIpDetails(ip) {
+  if (!ip || isPrivateIp(ip)) {
+    return {
+      ip_lookup_status: 'skipped',
+      ip_lookup_message: 'private_or_missing_ip',
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2500);
+
+  try {
+    const fields = 'status,message,country,regionName,city,zip,lat,lon,timezone,isp,org,as,mobile,proxy,hosting';
+    const url = `${IP_API_BASE_URL}/${encodeURIComponent(ip)}?fields=${fields}`;
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) {
+      return {
+        ip_lookup_status: 'error',
+        ip_lookup_message: `http_${response.status}`,
+      };
+    }
+
+    const payload = await response.json();
+    return {
+      ip_lookup_status: payload.status || 'error',
+      ip_lookup_message: payload.message || null,
+      ip_country: payload.country || null,
+      ip_region: payload.regionName || null,
+      ip_city: payload.city || null,
+      ip_zip: payload.zip || null,
+      ip_latitude: Number.isFinite(Number(payload.lat)) ? Number(payload.lat) : null,
+      ip_longitude: Number.isFinite(Number(payload.lon)) ? Number(payload.lon) : null,
+      ip_timezone: payload.timezone || null,
+      ip_isp: payload.isp || null,
+      ip_org: payload.org || null,
+      ip_as: payload.as || null,
+      ip_mobile: typeof payload.mobile === 'boolean' ? payload.mobile : null,
+      ip_proxy: typeof payload.proxy === 'boolean' ? payload.proxy : null,
+      ip_hosting: typeof payload.hosting === 'boolean' ? payload.hosting : null,
+    };
+  } catch (err) {
+    return {
+      ip_lookup_status: 'error',
+      ip_lookup_message: err.name === 'AbortError' ? 'timeout' : 'lookup_failed',
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function collectRequestContext(req) {
+  const requestIp = extractClientIp(req);
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 1000);
+  const ua = parseUserAgent(userAgent);
+  const ipDetails = await lookupIpDetails(requestIp);
+
+  return {
+    request_ip: requestIp,
+    request_user_agent: userAgent || null,
+    request_browser: ua.browser,
+    request_os: ua.os,
+    request_device_type: ua.deviceType,
+    ...ipDetails,
+  };
 }
 
 function getCloverImageUrl(item) {
@@ -284,22 +512,42 @@ function authMiddleware(req, res, next) {
 // --- Auth ---
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  // Demo login: admin@masakali.ca / admin123
-  if (email === 'admin@masakali.ca' && password === 'admin123') {
-    const token = jwt.sign({ id: 1, email, role: 'super_admin', name: 'Super Admin' }, JWT_SECRET, { expiresIn: '24h' });
-    return res.json({ token, admin: { id: 1, name: 'Super Admin', email, role: 'super_admin' } });
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
   }
-  if (db) {
-    try {
-      const [admins] = await db.query('SELECT * FROM admins WHERE email = ? AND is_active = 1', [email]);
-      if (admins.length && await bcrypt.compare(password, admins[0].password_hash)) {
-        const admin = admins[0];
-        const token = jwt.sign({ id: admin.id, email: admin.email, role: admin.role, name: admin.name }, JWT_SECRET, { expiresIn: '24h' });
-        return res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role } });
-      }
-    } catch (err) { console.error(err); }
+
+  if (!db) {
+    return res.status(503).json({ error: 'Database not connected. Login requires MySQL.' });
   }
-  res.status(401).json({ error: 'Invalid credentials' });
+
+  try {
+    const [admins] = await db.query('SELECT * FROM admins WHERE email = ? AND is_active = 1 LIMIT 1', [email]);
+    if (!admins.length) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const admin = admins[0];
+    const passwordMatches = await bcrypt.compare(password, admin.password_hash);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    await db.query('UPDATE admins SET last_login = NOW() WHERE id = ?', [admin.id]);
+
+    const token = jwt.sign(
+      { id: admin.id, email: admin.email, role: admin.role, name: admin.name },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.json({
+      token,
+      admin: { id: admin.id, name: admin.name, email: admin.email, role: admin.role },
+    });
+  } catch (err) {
+    console.error('Login error:', err);
+    return res.status(500).json({ error: 'Unable to authenticate at the moment' });
+  }
 });
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
@@ -459,14 +707,88 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/reservations', async (req, res) => {
-  const { restaurant_id, name, email, phone, date, time, persons, special_requests } = req.body;
+  const { restaurant_id, name, email, phone, date, time, persons, special_requests, geolocation } = req.body;
+  const parsedGeolocation = parseReservationGeolocation(geolocation);
+  const requestContext = await collectRequestContext(req);
   const confirmation_code = 'MAS-' + String(Date.now()).slice(-6);
 
   if (db) {
     try {
       const [result] = await db.query(
-        'INSERT INTO reservations (restaurant_id, name, email, phone, date, time, persons, special_requests, confirmation_code, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [restaurant_id, name, email, phone, date, time, persons, special_requests || null, confirmation_code, 'confirmed']
+        `INSERT INTO reservations (
+          restaurant_id,
+          name,
+          email,
+          phone,
+          date,
+          time,
+          persons,
+          special_requests,
+          geolocation_latitude,
+          geolocation_longitude,
+          geolocation_accuracy_meters,
+          geolocation_captured_at,
+          geolocation_source,
+          request_ip,
+          request_user_agent,
+          request_browser,
+          request_os,
+          request_device_type,
+          ip_lookup_status,
+          ip_lookup_message,
+          ip_country,
+          ip_region,
+          ip_city,
+          ip_zip,
+          ip_latitude,
+          ip_longitude,
+          ip_timezone,
+          ip_isp,
+          ip_org,
+          ip_as,
+          ip_mobile,
+          ip_proxy,
+          ip_hosting,
+          confirmation_code,
+          status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          restaurant_id,
+          name,
+          email,
+          phone,
+          date,
+          time,
+          persons,
+          special_requests || null,
+          parsedGeolocation?.latitude || null,
+          parsedGeolocation?.longitude || null,
+          parsedGeolocation?.accuracy || null,
+          parsedGeolocation?.captured_at || null,
+          parsedGeolocation?.source || null,
+          requestContext.request_ip,
+          requestContext.request_user_agent,
+          requestContext.request_browser,
+          requestContext.request_os,
+          requestContext.request_device_type,
+          requestContext.ip_lookup_status,
+          requestContext.ip_lookup_message,
+          requestContext.ip_country,
+          requestContext.ip_region,
+          requestContext.ip_city,
+          requestContext.ip_zip,
+          requestContext.ip_latitude,
+          requestContext.ip_longitude,
+          requestContext.ip_timezone,
+          requestContext.ip_isp,
+          requestContext.ip_org,
+          requestContext.ip_as,
+          requestContext.ip_mobile,
+          requestContext.ip_proxy,
+          requestContext.ip_hosting,
+          confirmation_code,
+          'confirmed',
+        ]
       );
       const [rows] = await db.query('SELECT * FROM reservations WHERE id = ?', [result.insertId]);
       const [restaurants] = await db.query('SELECT * FROM restaurants WHERE id = ?', [restaurant_id]);
@@ -481,6 +803,12 @@ app.post('/api/reservations', async (req, res) => {
     name, email, phone, date, time,
     persons: parseInt(persons),
     special_requests: special_requests || null,
+    geolocation_latitude: parsedGeolocation?.latitude || null,
+    geolocation_longitude: parsedGeolocation?.longitude || null,
+    geolocation_accuracy_meters: parsedGeolocation?.accuracy || null,
+    geolocation_captured_at: parsedGeolocation?.captured_at || null,
+    geolocation_source: parsedGeolocation?.source || null,
+    ...requestContext,
     status: 'confirmed',
     confirmation_code,
     created_at: new Date().toISOString(),
@@ -523,17 +851,89 @@ app.delete('/api/reservations/:id', authMiddleware, async (req, res) => {
 // --- Catering ---
 app.post('/api/catering', async (req, res) => {
   const { name, email, phone, event_date, guests, event_location, event_type, notes } = req.body;
+  const requestContext = await collectRequestContext(req);
   if (db) {
     try {
       const [result] = await db.query(
-        'INSERT INTO catering_requests (name, email, phone, event_date, guests, event_location, event_type, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [name, email, phone, event_date, guests, event_location, event_type, notes]
+        `INSERT INTO catering_requests (
+          name,
+          email,
+          phone,
+          event_date,
+          guests,
+          event_location,
+          event_type,
+          notes,
+          request_ip,
+          request_user_agent,
+          request_browser,
+          request_os,
+          request_device_type,
+          ip_lookup_status,
+          ip_lookup_message,
+          ip_country,
+          ip_region,
+          ip_city,
+          ip_zip,
+          ip_latitude,
+          ip_longitude,
+          ip_timezone,
+          ip_isp,
+          ip_org,
+          ip_as,
+          ip_mobile,
+          ip_proxy,
+          ip_hosting
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name,
+          email,
+          phone,
+          event_date,
+          guests,
+          event_location,
+          event_type,
+          notes,
+          requestContext.request_ip,
+          requestContext.request_user_agent,
+          requestContext.request_browser,
+          requestContext.request_os,
+          requestContext.request_device_type,
+          requestContext.ip_lookup_status,
+          requestContext.ip_lookup_message,
+          requestContext.ip_country,
+          requestContext.ip_region,
+          requestContext.ip_city,
+          requestContext.ip_zip,
+          requestContext.ip_latitude,
+          requestContext.ip_longitude,
+          requestContext.ip_timezone,
+          requestContext.ip_isp,
+          requestContext.ip_org,
+          requestContext.ip_as,
+          requestContext.ip_mobile,
+          requestContext.ip_proxy,
+          requestContext.ip_hosting,
+        ]
       );
       const [rows] = await db.query('SELECT * FROM catering_requests WHERE id = ?', [result.insertId]);
       return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
-  const newRequest = { id: nextCateringId++, name, email, phone, event_date, guests: parseInt(guests), event_location, event_type, notes, status: 'new', created_at: new Date().toISOString() };
+  const newRequest = {
+    id: nextCateringId++,
+    name,
+    email,
+    phone,
+    event_date,
+    guests: parseInt(guests),
+    event_location,
+    event_type,
+    notes,
+    ...requestContext,
+    status: 'new',
+    created_at: new Date().toISOString(),
+  };
   mockCateringRequests.push(newRequest);
   res.json(newRequest);
 });
@@ -551,11 +951,66 @@ app.get('/api/catering', authMiddleware, async (req, res) => {
 // --- Contact ---
 app.post('/api/contact', async (req, res) => {
   const { name, email, phone, subject, message, restaurant_id } = req.body;
+  const requestContext = await collectRequestContext(req);
   if (db) {
     try {
       const [result] = await db.query(
-        'INSERT INTO contact_inquiries (name, email, phone, subject, message, restaurant_id) VALUES (?, ?, ?, ?, ?, ?)',
-        [name, email, phone, subject, message, restaurant_id || null]
+        `INSERT INTO contact_inquiries (
+          name,
+          email,
+          phone,
+          subject,
+          message,
+          restaurant_id,
+          request_ip,
+          request_user_agent,
+          request_browser,
+          request_os,
+          request_device_type,
+          ip_lookup_status,
+          ip_lookup_message,
+          ip_country,
+          ip_region,
+          ip_city,
+          ip_zip,
+          ip_latitude,
+          ip_longitude,
+          ip_timezone,
+          ip_isp,
+          ip_org,
+          ip_as,
+          ip_mobile,
+          ip_proxy,
+          ip_hosting
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name,
+          email,
+          phone,
+          subject,
+          message,
+          restaurant_id || null,
+          requestContext.request_ip,
+          requestContext.request_user_agent,
+          requestContext.request_browser,
+          requestContext.request_os,
+          requestContext.request_device_type,
+          requestContext.ip_lookup_status,
+          requestContext.ip_lookup_message,
+          requestContext.ip_country,
+          requestContext.ip_region,
+          requestContext.ip_city,
+          requestContext.ip_zip,
+          requestContext.ip_latitude,
+          requestContext.ip_longitude,
+          requestContext.ip_timezone,
+          requestContext.ip_isp,
+          requestContext.ip_org,
+          requestContext.ip_as,
+          requestContext.ip_mobile,
+          requestContext.ip_proxy,
+          requestContext.ip_hosting,
+        ]
       );
       return res.json({ success: true, id: result.insertId });
     } catch (err) { console.error(err); }

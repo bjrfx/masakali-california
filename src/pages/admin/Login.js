@@ -58,9 +58,8 @@ export default function AdminLogin({ onLogin }) {
             {loading ? <><Loader2 size={18} className="mr-2 animate-spin" /> Signing in...</> : 'Sign In'}
           </button>
           <div className="mt-6 p-4 bg-amber-500/5 border border-amber-500/10 rounded-lg">
-            <p className="text-amber-600 dark:text-amber-400 text-xs font-semibold mb-1">Demo Credentials</p>
-            <p className="text-neutral-500 text-xs">Email: admin@masakali.ca</p>
-            <p className="text-neutral-500 text-xs">Password: admin123</p>
+            <p className="text-amber-600 dark:text-amber-400 text-xs font-semibold mb-1">MySQL Authentication Enabled</p>
+            <p className="text-neutral-500 text-xs">Use an admin email and password stored in the MySQL admins table.</p>
           </div>
         </form>
         <p className="text-neutral-500 dark:text-neutral-600 text-xs text-center mt-6">

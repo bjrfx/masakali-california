@@ -23,8 +23,17 @@ export default function Contact() {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) { setError('Please fill in all required fields.'); return; }
     setSubmitting(true);
-    try { await fetch('/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }); setSubmitted(true); }
-    catch { setError('Failed to send message. Please try again.'); }
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to send message.');
+      setSubmitted(true);
+    }
+    catch (err) { setError(err.message || 'Failed to send message. Please try again.'); }
     finally { setSubmitting(false); }
   };
 

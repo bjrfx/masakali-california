@@ -31,8 +31,17 @@ export default function Catering() {
     e.preventDefault();
     if (!form.name || !form.email || !form.phone || !form.event_date || !form.guests) { setError('Please fill in all required fields.'); return; }
     setSubmitting(true);
-    try { await fetch('/api/catering', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }); setSubmitted(true); }
-    catch { setError('Failed to submit request. Please try again.'); }
+    try {
+      const response = await fetch('/api/catering', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Failed to submit request.');
+      setSubmitted(true);
+    }
+    catch (err) { setError(err.message || 'Failed to submit request. Please try again.'); }
     finally { setSubmitting(false); }
   };
   const today = new Date().toISOString().split('T')[0];
