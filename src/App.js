@@ -18,6 +18,7 @@ import AdminAnalytics from './pages/admin/Analytics';
 import AdminCateringManagement from './pages/admin/CateringManagement';
 import AdminContactManagement from './pages/admin/ContactManagement';
 import AdminHomepageContentManagement from './pages/admin/HomepageContentManagement';
+import AdminNotificationEmailSettings from './pages/admin/NotificationEmailSettings';
 import AdminLayout from './components/AdminLayout';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -114,6 +115,13 @@ function App() {
             <ProtectedRoute>
               <AdminLayout admin={admin} onLogout={handleLogout}>
                 <AdminContactManagement token={adminToken} />
+              </AdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/notifications" element={
+            <ProtectedRoute>
+              <AdminLayout admin={admin} onLogout={handleLogout}>
+                <AdminNotificationEmailSettings token={adminToken} />
               </AdminLayout>
             </ProtectedRoute>
           } />

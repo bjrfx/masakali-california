@@ -195,6 +195,21 @@ CREATE TABLE IF NOT EXISTS admins (
 );
 
 -- =====================================================
+-- Email Notification Settings
+-- =====================================================
+CREATE TABLE IF NOT EXISTS email_notification_settings (
+  id TINYINT PRIMARY KEY,
+  reservations_email VARCHAR(255) DEFAULT NULL,
+  contact_email VARCHAR(255) DEFAULT NULL,
+  catering_email VARCHAR(255) DEFAULT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email)
+VALUES (1, NULL, NULL, NULL)
+ON DUPLICATE KEY UPDATE id = id;
+
+-- =====================================================
 -- Seed Data: Restaurants
 -- =====================================================
 INSERT INTO restaurants (name, slug, brand, address, city, province_state, country, phone, email, website) VALUES
