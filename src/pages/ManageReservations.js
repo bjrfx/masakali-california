@@ -237,7 +237,6 @@ export default function ManageReservations() {
                     required
                   />
                 </div>
-                <p className="text-xs text-neutral-500 mt-2">We automatically verify as country code 1 + your 10 digits.</p>
               </div>
 
               <button type="submit" disabled={loading} className="btn-gold w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed">
@@ -247,6 +246,8 @@ export default function ManageReservations() {
                   <><Search size={16} className="mr-2" /> Find Reservations</>
                 )}
               </button>
+
+              <p className="md:col-span-3 text-xs text-neutral-500 -mt-1">We automatically verify as country code 1 + your 10 digits.</p>
             </div>
 
             {error && (
