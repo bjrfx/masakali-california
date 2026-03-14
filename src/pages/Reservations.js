@@ -29,11 +29,34 @@ export default function Reservations() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    api.getRestaurants().then(setRestaurants).catch(console.error);
+    api.getRestaurants()
+      .then((data) => {
+        const californiaOnly = (data || []).filter((r) => (
+          r?.slug === 'california'
+          || String(r?.name || '').toLowerCase().includes('california')
+          || String(r?.city || '').toLowerCase() === 'cupertino'
+        ));
+        setRestaurants(californiaOnly);
+      })
+      .catch(console.error);
   }, []);
 
+  useEffect(() => {
+    if (restaurants.length === 1) {
+      setForm((prev) => ({ ...prev, restaurant_id: String(restaurants[0].id) }));
+    }
+  }, [restaurants]);
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, phone: digitsOnly });
+      setError('');
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
     setError('');
   };
 
@@ -44,10 +67,20 @@ export default function Reservations() {
       return;
     }
 
+    if (!/^\d{10}$/.test(form.phone)) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
     try {
-      const result = await api.createReservation(form);
+      const payload = {
+        ...form,
+        phone: `1${form.phone}`,
+      };
+
+      const result = await api.createReservation(payload);
       setConfirmation(result);
       setSubmitted(true);
     } catch (err) {
@@ -173,7 +206,7 @@ export default function Reservations() {
                     </div>
                     <div>
                       <label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Phone Number *</label>
-                      <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="(613) 555-0000" className="input-dark" required />
+                      <input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="4373761995" className="input-dark" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} minLength={10} required />
                     </div>
                     <div>
                       <label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Restaurant Branch *</label>
