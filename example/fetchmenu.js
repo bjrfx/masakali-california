@@ -20,15 +20,15 @@ app.get('/api/menu', async (req, res) => {
 
         img.image_url
 
-      FROM temp_category_items ci
+      FROM temp_category_items_stittsville ci
 
-      JOIN temp_categories c
+      JOIN temp_categories_stittsville c
         ON ci.category_id = c.id
 
-      JOIN temp_items i
+      JOIN temp_items_stittsville i
         ON ci.item_id = i.id
 
-      LEFT JOIN temp_item_images img
+      LEFT JOIN temp_item_images_stittsville img
         ON img.item_id = i.id
 
       ORDER BY c.sort_order
