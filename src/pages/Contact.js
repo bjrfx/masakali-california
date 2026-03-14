@@ -18,16 +18,32 @@ export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(''); };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setForm({ ...form, phone: digitsOnly });
+      setError('');
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
+    setError('');
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) { setError('Please fill in all required fields.'); return; }
+    if (form.phone && !/^\d{10}$/.test(form.phone)) { setError('Phone number must be exactly 10 digits.'); return; }
     setSubmitting(true);
     try {
+      const payload = {
+        ...form,
+        phone: form.phone ? `1${form.phone}` : '',
+      };
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Failed to send message.');
@@ -108,7 +124,7 @@ export default function Contact() {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Full Name *</label><input type="text" name="name" value={form.name} onChange={handleChange} placeholder="Your name" className="input-dark" required /></div>
                       <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Email Address *</label><input type="email" name="email" value={form.email} onChange={handleChange} placeholder="your@email.com" className="input-dark" required /></div>
-                      <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Phone</label><input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="(613) 555-0000" className="input-dark" /></div>
+                      <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Phone</label><input type="tel" name="phone" value={form.phone} onChange={handleChange} placeholder="4373761995" className="input-dark" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} minLength={10} /></div>
                       <div><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Subject</label><select name="subject" value={form.subject} onChange={handleChange} className="select-dark"><option value="">Select a topic</option><option value="general">General Inquiry</option><option value="reservation">Reservation Help</option><option value="catering">Catering Inquiry</option><option value="feedback">Feedback</option><option value="partnership">Partnership</option><option value="other">Other</option></select></div>
                       <div className="md:col-span-2"><label className="block text-neutral-500 dark:text-neutral-400 text-sm mb-2">Message *</label><textarea name="message" value={form.message} onChange={handleChange} rows={5} placeholder="How can we help you?" className="input-dark resize-none" required /></div>
                     </div>
