@@ -51,6 +51,8 @@ export const api = {
   createTestimonial: (data) => apiCall('/admin/testimonials', { method: 'POST', body: JSON.stringify(data) }),
   updateTestimonial: (id, data) => apiCall(`/admin/testimonials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTestimonial: (id) => apiCall(`/admin/testimonials/${id}`, { method: 'DELETE' }),
+  getNotificationEmails: () => apiCall('/admin/notification-emails'),
+  updateNotificationEmails: (data) => apiCall('/admin/notification-emails', { method: 'PUT', body: JSON.stringify(data) }),
 
   // Reservations
   getReservations: (params = {}) => {

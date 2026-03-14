@@ -88,6 +88,20 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS email_notification_settings (
+        id TINYINT PRIMARY KEY,
+        reservations_email VARCHAR(255) DEFAULT NULL,
+        contact_email VARCHAR(255) DEFAULT NULL,
+        catering_email VARCHAR(255) DEFAULT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    await db.query(
+      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email)
+       VALUES (1, NULL, NULL, NULL)
+       ON DUPLICATE KEY UPDATE id = id`
+    );
     try {
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_latitude DECIMAL(10, 8) NULL');
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_longitude DECIMAL(11, 8) NULL');
@@ -464,6 +478,12 @@ let mockTestimonials = [
   { id: 3, name: 'Priya S.', text: 'Feels like home cooking elevated to fine dining. The lamb chops are a must-try. Exceptional service every time.', rating: 5, branch: 'Restobar', sort_order: 3, is_active: true },
 ];
 
+let mockEmailNotificationSettings = {
+  reservations_email: '',
+  contact_email: '',
+  catering_email: '',
+};
+
 let nextReservationId = 9;
 let nextCateringId = 3;
 let nextContactId = 3;
@@ -472,30 +492,110 @@ let nextTestimonialId = 4;
 // =====================================================
 // Email Transporter
 // =====================================================
-let transporter;
-try {
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'mail.masakalirestrobar.ca',
-    port: parseInt(process.env.EMAIL_PORT || '465'),
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER || 'admin@masakalirestrobar.ca',
-      pass: process.env.EMAIL_PASS || '',
-    },
-  });
-} catch (e) {
-  console.log('Email transporter not configured');
+const SMTP_HOST = process.env.EMAIL_SMTP_HOST || process.env.EMAIL_HOST || 'mail.masakalicalifornia.com';
+const SMTP_PORT = parseInt(process.env.EMAIL_SMTP_PORT || process.env.EMAIL_PORT || '465', 10);
+
+function createEmailTransporter(user, pass) {
+  if (!user || !pass) return null;
+  try {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: true,
+      auth: { user, pass },
+    });
+  } catch (err) {
+    console.log('Email transporter not configured for user:', user, err.message);
+    return null;
+  }
 }
 
-async function sendReservationEmail(reservation, restaurant) {
-  if (!transporter || !process.env.EMAIL_PASS) {
-    console.log('Email skipped (not configured). Reservation:', reservation.confirmation_code);
+const reservationEmailUser = process.env.RESERVATION_EMAIL_USER || 'reservations@masakalicalifornia.com';
+const reservationEmailPass = process.env.RESERVATION_EMAIL_PASS || '';
+const contactEmailUser = process.env.CONTACT_EMAIL_USER || 'contact@masakalicalifornia.com';
+const contactEmailPass = process.env.CONTACT_EMAIL_PASS || '';
+
+const reservationTransporter = createEmailTransporter(reservationEmailUser, reservationEmailPass);
+const contactTransporter = createEmailTransporter(contactEmailUser, contactEmailPass);
+
+function splitRecipientEmails(value) {
+  return String(value || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeRecipientSetting(value) {
+  return splitRecipientEmails(value).join(', ');
+}
+
+async function getEmailNotificationSettings() {
+  if (db) {
+    try {
+      const [rows] = await db.query(
+        'SELECT reservations_email, contact_email, catering_email FROM email_notification_settings WHERE id = 1 LIMIT 1'
+      );
+      if (rows.length) {
+        return {
+          reservations_email: normalizeRecipientSetting(rows[0].reservations_email),
+          contact_email: normalizeRecipientSetting(rows[0].contact_email),
+          catering_email: normalizeRecipientSetting(rows[0].catering_email),
+        };
+      }
+    } catch (err) {
+      console.error('Unable to read email notification settings:', err.message);
+    }
+  }
+
+  return {
+    reservations_email: normalizeRecipientSetting(mockEmailNotificationSettings.reservations_email),
+    contact_email: normalizeRecipientSetting(mockEmailNotificationSettings.contact_email),
+    catering_email: normalizeRecipientSetting(mockEmailNotificationSettings.catering_email),
+  };
+}
+
+async function saveEmailNotificationSettings(input) {
+  const nextSettings = {
+    reservations_email: normalizeRecipientSetting(input?.reservations_email),
+    contact_email: normalizeRecipientSetting(input?.contact_email),
+    catering_email: normalizeRecipientSetting(input?.catering_email),
+  };
+
+  if (db) {
+    await db.query(
+      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email)
+       VALUES (1, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         reservations_email = VALUES(reservations_email),
+         contact_email = VALUES(contact_email),
+         catering_email = VALUES(catering_email)`,
+      [nextSettings.reservations_email || null, nextSettings.contact_email || null, nextSettings.catering_email || null]
+    );
+  } else {
+    mockEmailNotificationSettings = { ...nextSettings };
+  }
+
+  return nextSettings;
+}
+
+async function sendReservationEmails(reservation, restaurant) {
+  const settings = await getEmailNotificationSettings();
+  const adminRecipients = splitRecipientEmails(settings.reservations_email);
+
+  if (!adminRecipients.length) {
+    console.log('Reservation email skipped (no admin recipient configured). Reservation:', reservation.confirmation_code);
     return;
   }
+
+  if (!reservationTransporter) {
+    console.log('Reservation email skipped (reservation mailbox not configured). Reservation:', reservation.confirmation_code);
+    return;
+  }
+
   try {
     // Customer confirmation
-    await transporter.sendMail({
-      from: '"Masakali Indian Cuisine" <admin@masakalirestrobar.ca>',
+    await reservationTransporter.sendMail({
+      from: `"Masakali Reservations" <${reservationEmailUser}>`,
       to: reservation.email,
       subject: `Reservation Confirmed - ${reservation.confirmation_code}`,
       html: `
@@ -517,14 +617,48 @@ async function sendReservationEmail(reservation, restaurant) {
     });
 
     // Admin notification
-    await transporter.sendMail({
-      from: '"Masakali System" <admin@masakalirestrobar.ca>',
-      to: process.env.ADMIN_EMAIL || 'masakalirestrobar@gmail.com',
+    await reservationTransporter.sendMail({
+      from: `"Masakali Reservations" <${reservationEmailUser}>`,
+      to: adminRecipients.join(', '),
       subject: 'New Reservation Alert',
-      text: `New reservation:\nName: ${reservation.name}\nPhone: ${reservation.phone}\nBranch: ${restaurant.name}\nDate: ${reservation.date}\nTime: ${reservation.time}\nGuests: ${reservation.persons}\nCode: ${reservation.confirmation_code}`,
+      text: `New reservation:\nName: ${reservation.name}\nEmail: ${reservation.email}\nPhone: ${reservation.phone}\nBranch: ${restaurant?.name || 'Masakali California'}\nDate: ${reservation.date}\nTime: ${reservation.time}\nGuests: ${reservation.persons}\nCode: ${reservation.confirmation_code}`,
     });
   } catch (err) {
-    console.error('Email error:', err.message);
+    console.error('Reservation email error:', err.message);
+  }
+}
+
+async function sendCateringNotification(requestPayload) {
+  const settings = await getEmailNotificationSettings();
+  const recipients = splitRecipientEmails(settings.catering_email);
+  if (!recipients.length || !contactTransporter) return;
+
+  try {
+    await contactTransporter.sendMail({
+      from: `"Masakali Contact" <${contactEmailUser}>`,
+      to: recipients.join(', '),
+      subject: 'New Catering Request',
+      text: `New catering request:\nName: ${requestPayload.name}\nEmail: ${requestPayload.email}\nPhone: ${requestPayload.phone}\nEvent Date: ${requestPayload.event_date || 'N/A'}\nGuests: ${requestPayload.guests || 'N/A'}\nLocation: ${requestPayload.event_location || 'N/A'}\nType: ${requestPayload.event_type || 'N/A'}\nNotes: ${requestPayload.notes || 'N/A'}`,
+    });
+  } catch (err) {
+    console.error('Catering notification email error:', err.message);
+  }
+}
+
+async function sendContactNotification(inquiry) {
+  const settings = await getEmailNotificationSettings();
+  const recipients = splitRecipientEmails(settings.contact_email);
+  if (!recipients.length || !contactTransporter) return;
+
+  try {
+    await contactTransporter.sendMail({
+      from: `"Masakali Contact" <${contactEmailUser}>`,
+      to: recipients.join(', '),
+      subject: 'New Contact Form Submission',
+      text: `New contact inquiry:\nName: ${inquiry.name}\nEmail: ${inquiry.email}\nPhone: ${inquiry.phone || 'N/A'}\nSubject: ${inquiry.subject || 'N/A'}\nMessage: ${inquiry.message}`,
+    });
+  } catch (err) {
+    console.error('Contact notification email error:', err.message);
   }
 }
 
@@ -1012,6 +1146,33 @@ app.delete('/api/admin/testimonials/:id', authMiddleware, async (req, res) => {
   return res.json({ success: true });
 });
 
+// --- Admin Email Notification Settings ---
+app.get('/api/admin/notification-emails', authMiddleware, async (req, res) => {
+  try {
+    const settings = await getEmailNotificationSettings();
+    return res.json(settings);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to load notification email settings' });
+  }
+});
+
+app.put('/api/admin/notification-emails', authMiddleware, async (req, res) => {
+  const { reservations_email, contact_email, catering_email } = req.body || {};
+
+  try {
+    const settings = await saveEmailNotificationSettings({
+      reservations_email,
+      contact_email,
+      catering_email,
+    });
+    return res.json(settings);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update notification email settings' });
+  }
+});
+
 // --- Reservations ---
 app.get('/api/reservations', authMiddleware, async (req, res) => {
   const { branch, date, status } = req.query;
@@ -1121,7 +1282,7 @@ app.post('/api/reservations', async (req, res) => {
       );
       const [rows] = await db.query('SELECT * FROM reservations WHERE id = ?', [result.insertId]);
       const [restaurants] = await db.query('SELECT * FROM restaurants WHERE id = ?', [restaurant_id]);
-      if (restaurants.length) sendReservationEmail(rows[0], restaurants[0]);
+      sendReservationEmails(rows[0], restaurants[0] || null);
       return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
@@ -1144,7 +1305,7 @@ app.post('/api/reservations', async (req, res) => {
   };
   mockReservations.push(newReservation);
   const restaurant = mockRestaurants.find(r => r.id === parseInt(restaurant_id));
-  sendReservationEmail(newReservation, restaurant);
+  sendReservationEmails(newReservation, restaurant || null);
   res.json(newReservation);
 });
 
@@ -1246,6 +1407,7 @@ app.post('/api/catering', async (req, res) => {
         ]
       );
       const [rows] = await db.query('SELECT * FROM catering_requests WHERE id = ?', [result.insertId]);
+      sendCateringNotification(rows[0]);
       return res.json(rows[0]);
     } catch (err) { console.error(err); }
   }
@@ -1264,6 +1426,7 @@ app.post('/api/catering', async (req, res) => {
     created_at: new Date().toISOString(),
   };
   mockCateringRequests.push(newRequest);
+  sendCateringNotification(newRequest);
   res.json(newRequest);
 });
 
@@ -1393,6 +1556,10 @@ app.post('/api/contact', async (req, res) => {
           requestContext.ip_hosting,
         ]
       );
+      const [rows] = await db.query('SELECT * FROM contact_inquiries WHERE id = ?', [result.insertId]);
+      if (rows.length) {
+        sendContactNotification(rows[0]);
+      }
       return res.json({ success: true, id: result.insertId });
     } catch (err) { console.error(err); }
   }
@@ -1409,6 +1576,7 @@ app.post('/api/contact', async (req, res) => {
     created_at: new Date().toISOString(),
   };
   mockContactInquiries.push(newInquiry);
+  sendContactNotification(newInquiry);
   res.json({ success: true, id: newInquiry.id });
 });
 
