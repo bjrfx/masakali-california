@@ -202,7 +202,7 @@ export default function Menu() {
                           <div className="p-6">
                             <div className="flex items-start justify-between mb-2">
                               <h3 className="text-neutral-900 dark:text-white font-semibold text-lg leading-tight flex-1 mr-3">{item.name}</h3>
-                              <span className="text-amber-500 dark:text-amber-400 font-bold text-lg whitespace-nowrap">${item.price?.toFixed(2)}</span>
+                              {/* <span className="text-amber-500 dark:text-amber-400 font-bold text-lg whitespace-nowrap">${item.price?.toFixed(2)}</span> */}
                             </div>
                             <p className="text-neutral-500 text-sm mb-4 line-clamp-2">{item.description}</p>
                             <div className="flex items-center gap-2 flex-wrap">

@@ -372,6 +372,232 @@ function getCloverImageUrl(item) {
   return source;
 }
 
+async function fetchTempMenuData() {
+  if (!db) throw new Error('Database not connected');
+
+  const [categoryRows] = await db.query(
+    `SELECT id, name, sort_order
+     FROM temp_categories
+     ORDER BY sort_order ASC, name ASC`
+  );
+
+  const categories = categoryRows.map((row, index) => ({
+    id: String(row.id),
+    name: row.name || 'Menu',
+    slug: String(row.name || `category-${index + 1}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, ''),
+    sort_order: Number(row.sort_order ?? index + 1),
+  }));
+
+  const [rows] = await db.query(
+    `SELECT
+       c.id AS category_id,
+       c.name AS category_name,
+       c.sort_order,
+       i.id AS item_id,
+       i.name AS item_name,
+       i.description,
+       i.price,
+       i.available,
+       img.image_type,
+       img.image_url
+     FROM temp_category_items ci
+     JOIN temp_categories c ON ci.category_id = c.id
+     JOIN temp_items i ON ci.item_id = i.id
+     LEFT JOIN temp_item_images img ON img.item_id = i.id
+     WHERE i.available = 1
+     ORDER BY c.sort_order ASC, c.name ASC, i.name ASC`
+  );
+
+  const byCompositeKey = new Map();
+
+  rows.forEach((row) => {
+    const categoryId = String(row.category_id);
+    const itemId = String(row.item_id);
+    const compositeKey = `${categoryId}::${itemId}`;
+
+    if (!byCompositeKey.has(compositeKey)) {
+      const priceCents = Number(row.price || 0);
+      byCompositeKey.set(compositeKey, {
+        id: itemId,
+        source_id: itemId,
+        name: row.item_name || 'Menu Item',
+        description: row.description || '',
+        price: Number.isFinite(priceCents) ? Number((priceCents / 100).toFixed(2)) : 0,
+        image_url: row.image_url || null,
+        images: [],
+        category_id: categoryId,
+        category_name: row.category_name || 'Menu',
+        is_vegetarian: false,
+        spice_level: 'medium',
+        is_featured: false,
+      });
+    }
+
+    if (row.image_url) {
+      const item = byCompositeKey.get(compositeKey);
+      const alreadyIncluded = item.images.some((image) => image.source === row.image_url);
+      if (!alreadyIncluded) {
+        item.images.push({
+          name: row.image_type || 'default',
+          source: row.image_url,
+        });
+      }
+      if (!item.image_url) item.image_url = row.image_url;
+    }
+  });
+
+  return {
+    categories,
+    items: Array.from(byCompositeKey.values()),
+  };
+}
+
+function normalizeMenuCategoryId(categoryId) {
+  const value = String(categoryId ?? '').trim();
+  return value || null;
+}
+
+function toPriceCents(price) {
+  const numeric = Number(price);
+  if (!Number.isFinite(numeric) || numeric < 0) return null;
+  return Math.round(numeric * 100);
+}
+
+function generateTempMenuItemId() {
+  return Math.random().toString(36).slice(2, 12).toUpperCase();
+}
+
+async function createTempMenuItem(payload) {
+  const categoryId = normalizeMenuCategoryId(payload.category_id);
+  const priceCents = toPriceCents(payload.price);
+  const name = String(payload.name || '').trim();
+  const description = String(payload.description || '').trim();
+
+  if (!name || !categoryId || priceCents === null) {
+    const err = new Error('name, category_id and valid price are required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories WHERE id = ? LIMIT 1', [categoryId]);
+  if (!categoryRows.length) {
+    const err = new Error('Category not found');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let itemId = generateTempMenuItemId();
+  // Guard against collisions.
+  for (let i = 0; i < 5; i += 1) {
+    const [exists] = await db.query('SELECT id FROM temp_items WHERE id = ? LIMIT 1', [itemId]);
+    if (!exists.length) break;
+    itemId = generateTempMenuItemId();
+  }
+
+  await db.query(
+    'INSERT INTO temp_items (id, name, description, price, available, age_restricted) VALUES (?, ?, ?, ?, 1, 0)',
+    [itemId, name, description, priceCents]
+  );
+  await db.query('INSERT INTO temp_category_items (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
+
+  const tempMenu = await fetchTempMenuData();
+  const created = tempMenu.items.find((item) => String(item.id) === String(itemId));
+  if (!created) {
+    return {
+      id: itemId,
+      source_id: itemId,
+      name,
+      description,
+      price: Number((priceCents / 100).toFixed(2)),
+      image_url: null,
+      images: [],
+      category_id: categoryId,
+      category_name: categoryRows[0].name,
+      is_vegetarian: Boolean(payload.is_vegetarian),
+      spice_level: normalizeSpiceLevel(payload.spice_level),
+      is_featured: Boolean(payload.is_featured),
+    };
+  }
+
+  return {
+    ...created,
+    is_vegetarian: Boolean(payload.is_vegetarian),
+    spice_level: normalizeSpiceLevel(payload.spice_level),
+    is_featured: Boolean(payload.is_featured),
+  };
+}
+
+async function updateTempMenuItem(itemId, payload) {
+  const categoryId = normalizeMenuCategoryId(payload.category_id);
+  const priceCents = toPriceCents(payload.price);
+  const name = String(payload.name || '').trim();
+  const description = String(payload.description || '').trim();
+
+  if (!name || !categoryId || priceCents === null) {
+    const err = new Error('name, category_id and valid price are required');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories WHERE id = ? LIMIT 1', [categoryId]);
+  if (!categoryRows.length) {
+    const err = new Error('Category not found');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const [updateResult] = await db.query(
+    'UPDATE temp_items SET name = ?, description = ?, price = ? WHERE id = ?',
+    [name, description, priceCents, itemId]
+  );
+
+  if (!updateResult.affectedRows) {
+    const err = new Error('Menu item not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await db.query('DELETE FROM temp_category_items WHERE item_id = ?', [itemId]);
+  await db.query('INSERT INTO temp_category_items (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
+
+  const tempMenu = await fetchTempMenuData();
+  const updated = tempMenu.items.find((item) => String(item.id) === String(itemId));
+  if (!updated) {
+    return {
+      id: String(itemId),
+      source_id: String(itemId),
+      name,
+      description,
+      price: Number((priceCents / 100).toFixed(2)),
+      image_url: null,
+      images: [],
+      category_id: categoryId,
+      category_name: categoryRows[0].name,
+      is_vegetarian: Boolean(payload.is_vegetarian),
+      spice_level: normalizeSpiceLevel(payload.spice_level),
+      is_featured: Boolean(payload.is_featured),
+    };
+  }
+
+  return {
+    ...updated,
+    is_vegetarian: Boolean(payload.is_vegetarian),
+    spice_level: normalizeSpiceLevel(payload.spice_level),
+    is_featured: Boolean(payload.is_featured),
+  };
+}
+
+async function deleteTempMenuItem(itemId) {
+  await db.query('DELETE FROM homepage_featured_dishes WHERE menu_item_key = ?', [String(itemId)]);
+  await db.query('DELETE FROM temp_item_images WHERE item_id = ?', [itemId]);
+  await db.query('DELETE FROM temp_category_items WHERE item_id = ?', [itemId]);
+  const [result] = await db.query('DELETE FROM temp_items WHERE id = ?', [itemId]);
+  return Boolean(result.affectedRows);
+}
+
 async function fetchCloverMenuData() {
   const response = await fetch(CLOVER_MENU_URL);
   if (!response.ok) {
@@ -863,6 +1089,13 @@ async function getAllMenuItems() {
     } catch (err) {
       // In this deployment, menu is served by Clover and local menu tables may not exist.
       if (!isTableMissingError(err)) throw err;
+
+      try {
+        const tempMenu = await fetchTempMenuData();
+        return tempMenu.items;
+      } catch (tempErr) {
+        if (!isTableMissingError(tempErr)) throw tempErr;
+      }
     }
   }
 
@@ -984,7 +1217,20 @@ app.get('/api/categories', async (req, res) => {
     try {
       const [rows] = await db.query('SELECT * FROM menu_categories WHERE is_active = 1 ORDER BY sort_order');
       return res.json(rows);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const tempMenu = await fetchTempMenuData();
+          return res.json(tempMenu.categories);
+        } catch (tempErr) {
+          if (!isTableMissingError(tempErr)) {
+            console.error(tempErr);
+          }
+        }
+      }
+    }
   }
   try {
     const cloverMenu = await fetchCloverMenuData();
@@ -1001,8 +1247,7 @@ app.get('/api/menu', async (req, res) => {
     try {
       let featuredItems = await getFeaturedDishesResolved();
       if (category) {
-        const categoryId = parseInt(category, 10);
-        featuredItems = featuredItems.filter((item) => item.category_id === categoryId);
+        featuredItems = featuredItems.filter((item) => String(item.category_id) === String(category));
       }
       return res.json(featuredItems);
     } catch (err) {
@@ -1020,7 +1265,20 @@ app.get('/api/menu', async (req, res) => {
       const [rows] = await db.query(query, params);
       return res.json(rows);
     } catch (err) {
-      if (!isTableMissingError(err)) console.error(err);
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const tempMenu = await fetchTempMenuData();
+          let items = [...tempMenu.items];
+          if (category) {
+            items = items.filter((item) => String(item.category_id) === String(category));
+          }
+          return res.json(items);
+        } catch (tempErr) {
+          if (!isTableMissingError(tempErr)) console.error(tempErr);
+        }
+      }
     }
   }
 
@@ -1046,7 +1304,17 @@ app.get('/api/menu/:id', async (req, res) => {
       const [rows] = await db.query('SELECT * FROM menu_items WHERE id = ?', [req.params.id]);
       if (rows.length) return res.json(rows[0]);
     } catch (err) {
-      if (!isTableMissingError(err)) console.error(err);
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const tempMenu = await fetchTempMenuData();
+          const item = tempMenu.items.find((menuItem) => String(menuItem.id) === String(req.params.id));
+          if (item) return res.json(item);
+        } catch (tempErr) {
+          if (!isTableMissingError(tempErr)) console.error(tempErr);
+        }
+      }
     }
   }
 
@@ -1071,7 +1339,22 @@ app.post('/api/menu', authMiddleware, async (req, res) => {
       );
       const [rows] = await db.query('SELECT * FROM menu_items WHERE id = ?', [result.insertId]);
       return res.json(rows[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const created = await createTempMenuItem(req.body || {});
+          return res.json(created);
+        } catch (tempErr) {
+          if (tempErr.statusCode) {
+            return res.status(tempErr.statusCode).json({ error: tempErr.message });
+          }
+          console.error(tempErr);
+          return res.status(500).json({ error: 'Failed to create menu item' });
+        }
+      }
+    }
   }
   return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
@@ -1086,7 +1369,22 @@ app.put('/api/menu/:id', authMiddleware, async (req, res) => {
       );
       const [rows] = await db.query('SELECT * FROM menu_items WHERE id = ?', [req.params.id]);
       return res.json(rows[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const updated = await updateTempMenuItem(req.params.id, req.body || {});
+          return res.json(updated);
+        } catch (tempErr) {
+          if (tempErr.statusCode) {
+            return res.status(tempErr.statusCode).json({ error: tempErr.message });
+          }
+          console.error(tempErr);
+          return res.status(500).json({ error: 'Failed to update menu item' });
+        }
+      }
+    }
   }
   return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
@@ -1096,7 +1394,20 @@ app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
     try {
       await db.query('DELETE FROM menu_items WHERE id = ?', [req.params.id]);
       return res.json({ success: true });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) {
+        console.error(err);
+      } else {
+        try {
+          const removed = await deleteTempMenuItem(req.params.id);
+          if (!removed) return res.status(404).json({ error: 'Not found' });
+          return res.json({ success: true });
+        } catch (tempErr) {
+          console.error(tempErr);
+          return res.status(500).json({ error: 'Failed to delete menu item' });
+        }
+      }
+    }
   }
   return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
 });
