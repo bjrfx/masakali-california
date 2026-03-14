@@ -377,7 +377,7 @@ async function fetchTempMenuData() {
 
   const [categoryRows] = await db.query(
     `SELECT id, name, sort_order
-     FROM temp_categories
+      FROM temp_categories_stittsville
      ORDER BY sort_order ASC, name ASC`
   );
 
@@ -403,10 +403,10 @@ async function fetchTempMenuData() {
        i.available,
        img.image_type,
        img.image_url
-     FROM temp_category_items ci
-     JOIN temp_categories c ON ci.category_id = c.id
-     JOIN temp_items i ON ci.item_id = i.id
-     LEFT JOIN temp_item_images img ON img.item_id = i.id
+        FROM temp_category_items_stittsville ci
+        JOIN temp_categories_stittsville c ON ci.category_id = c.id
+        JOIN temp_items_stittsville i ON ci.item_id = i.id
+        LEFT JOIN temp_item_images_stittsville img ON img.item_id = i.id
      WHERE i.available = 1
      ORDER BY c.sort_order ASC, c.name ASC, i.name ASC`
   );
@@ -482,7 +482,7 @@ async function createTempMenuItem(payload) {
     throw err;
   }
 
-  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories WHERE id = ? LIMIT 1', [categoryId]);
+  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories_stittsville WHERE id = ? LIMIT 1', [categoryId]);
   if (!categoryRows.length) {
     const err = new Error('Category not found');
     err.statusCode = 400;
@@ -492,16 +492,16 @@ async function createTempMenuItem(payload) {
   let itemId = generateTempMenuItemId();
   // Guard against collisions.
   for (let i = 0; i < 5; i += 1) {
-    const [exists] = await db.query('SELECT id FROM temp_items WHERE id = ? LIMIT 1', [itemId]);
+    const [exists] = await db.query('SELECT id FROM temp_items_stittsville WHERE id = ? LIMIT 1', [itemId]);
     if (!exists.length) break;
     itemId = generateTempMenuItemId();
   }
 
   await db.query(
-    'INSERT INTO temp_items (id, name, description, price, available, age_restricted) VALUES (?, ?, ?, ?, 1, 0)',
+    'INSERT INTO temp_items_stittsville (id, name, description, price, available, age_restricted) VALUES (?, ?, ?, ?, 1, 0)',
     [itemId, name, description, priceCents]
   );
-  await db.query('INSERT INTO temp_category_items (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
+  await db.query('INSERT INTO temp_category_items_stittsville (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
 
   const tempMenu = await fetchTempMenuData();
   const created = tempMenu.items.find((item) => String(item.id) === String(itemId));
@@ -542,7 +542,7 @@ async function updateTempMenuItem(itemId, payload) {
     throw err;
   }
 
-  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories WHERE id = ? LIMIT 1', [categoryId]);
+  const [categoryRows] = await db.query('SELECT id, name FROM temp_categories_stittsville WHERE id = ? LIMIT 1', [categoryId]);
   if (!categoryRows.length) {
     const err = new Error('Category not found');
     err.statusCode = 400;
@@ -550,7 +550,7 @@ async function updateTempMenuItem(itemId, payload) {
   }
 
   const [updateResult] = await db.query(
-    'UPDATE temp_items SET name = ?, description = ?, price = ? WHERE id = ?',
+    'UPDATE temp_items_stittsville SET name = ?, description = ?, price = ? WHERE id = ?',
     [name, description, priceCents, itemId]
   );
 
@@ -560,8 +560,8 @@ async function updateTempMenuItem(itemId, payload) {
     throw err;
   }
 
-  await db.query('DELETE FROM temp_category_items WHERE item_id = ?', [itemId]);
-  await db.query('INSERT INTO temp_category_items (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
+  await db.query('DELETE FROM temp_category_items_stittsville WHERE item_id = ?', [itemId]);
+  await db.query('INSERT INTO temp_category_items_stittsville (category_id, item_id) VALUES (?, ?)', [categoryId, itemId]);
 
   const tempMenu = await fetchTempMenuData();
   const updated = tempMenu.items.find((item) => String(item.id) === String(itemId));
@@ -592,9 +592,9 @@ async function updateTempMenuItem(itemId, payload) {
 
 async function deleteTempMenuItem(itemId) {
   await db.query('DELETE FROM homepage_featured_dishes WHERE menu_item_key = ?', [String(itemId)]);
-  await db.query('DELETE FROM temp_item_images WHERE item_id = ?', [itemId]);
-  await db.query('DELETE FROM temp_category_items WHERE item_id = ?', [itemId]);
-  const [result] = await db.query('DELETE FROM temp_items WHERE id = ?', [itemId]);
+  await db.query('DELETE FROM temp_item_images_stittsville WHERE item_id = ?', [itemId]);
+  await db.query('DELETE FROM temp_category_items_stittsville WHERE item_id = ?', [itemId]);
+  const [result] = await db.query('DELETE FROM temp_items_stittsville WHERE id = ?', [itemId]);
   return Boolean(result.affectedRows);
 }
 

@@ -28,10 +28,10 @@ const items = data.items;
 
 await connection.execute("SET FOREIGN_KEY_CHECKS=0");
 
-await connection.execute("TRUNCATE temp_category_items");
-await connection.execute("TRUNCATE temp_item_images");
-await connection.execute("TRUNCATE temp_items");
-await connection.execute("TRUNCATE temp_categories");
+await connection.execute("TRUNCATE temp_category_items_stittsville");
+await connection.execute("TRUNCATE temp_item_images_stittsville");
+await connection.execute("TRUNCATE temp_items_stittsville");
+await connection.execute("TRUNCATE temp_categories_stittsville");
 
 await connection.execute("SET FOREIGN_KEY_CHECKS=1");
 
@@ -42,7 +42,7 @@ for(const key in categories){
     const cat = categories[key];
 
     await connection.execute(
-        "INSERT INTO temp_categories (id,name,sort_order) VALUES (?,?,?)",
+        "INSERT INTO temp_categories_stittsville (id,name,sort_order) VALUES (?,?,?)",
         [
             cat.id,
             cat.name,
@@ -59,7 +59,7 @@ console.log("Categories inserted");
 for(const item of items){
 
     await connection.execute(
-        "INSERT INTO temp_items (id,name,description,price,available,age_restricted) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO temp_items_stittsville (id,name,description,price,available,age_restricted) VALUES (?,?,?,?,?,?)",
         [
             item.id,
             item.name,
@@ -77,7 +77,7 @@ for(const item of items){
         for(const img of item.images){
 
             await connection.execute(
-                "INSERT INTO temp_item_images (item_id,image_type,image_url) VALUES (?,?,?)",
+                "INSERT INTO temp_item_images_stittsville (item_id,image_type,image_url) VALUES (?,?,?)",
                 [
                     item.id,
                     img.name,
@@ -104,7 +104,7 @@ for(const key in categories){
         for(const itemId of cat.items){
 
             await connection.execute(
-                "INSERT INTO temp_category_items (category_id,item_id) VALUES (?,?)",
+                "INSERT INTO temp_category_items_stittsville (category_id,item_id) VALUES (?,?)",
                 [
                     cat.id,
                     itemId
