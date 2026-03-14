@@ -489,6 +489,78 @@ let nextCateringId = 3;
 let nextContactId = 3;
 let nextTestimonialId = 4;
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeReservationPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 10) return `1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return digits;
+  return digits;
+}
+
+function reservationPhonesMatch(left, right) {
+  const normalizedLeft = normalizeReservationPhone(left);
+  const normalizedRight = normalizeReservationPhone(right);
+  if (!normalizedLeft || !normalizedRight) return false;
+  return normalizedLeft === normalizedRight;
+}
+
+function sortReservationsNewestFirst(rows) {
+  return [...rows].sort((a, b) => {
+    const aCreated = Date.parse(a.created_at || '');
+    const bCreated = Date.parse(b.created_at || '');
+
+    if (!Number.isNaN(aCreated) && !Number.isNaN(bCreated) && aCreated !== bCreated) {
+      return bCreated - aCreated;
+    }
+
+    if ((a.date || '') !== (b.date || '')) return String(b.date || '').localeCompare(String(a.date || ''));
+    if ((a.time || '') !== (b.time || '')) return String(b.time || '').localeCompare(String(a.time || ''));
+    return Number(b.id || 0) - Number(a.id || 0);
+  });
+}
+
+function buildCustomerReservationUpdatePayload(input) {
+  const updates = {};
+
+  if (typeof input.name === 'string' && input.name.trim()) {
+    updates.name = input.name.trim();
+  }
+
+  if (typeof input.email === 'string' && input.email.trim()) {
+    updates.email = normalizeEmail(input.email);
+  }
+
+  if (input.phone !== undefined) {
+    const normalizedPhone = normalizeReservationPhone(input.phone);
+    if (normalizedPhone) updates.phone = normalizedPhone;
+  }
+
+  if (typeof input.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.date)) {
+    updates.date = input.date;
+  }
+
+  if (typeof input.time === 'string' && /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(input.time)) {
+    updates.time = input.time;
+  }
+
+  if (input.persons !== undefined) {
+    const parsedPersons = parseInt(input.persons, 10);
+    if (Number.isFinite(parsedPersons) && parsedPersons > 0 && parsedPersons <= 30) {
+      updates.persons = parsedPersons;
+    }
+  }
+
+  if (input.special_requests !== undefined) {
+    updates.special_requests = String(input.special_requests || '').trim() || null;
+  }
+
+  return updates;
+}
+
 // =====================================================
 // Email Transporter
 // =====================================================
@@ -625,6 +697,53 @@ async function sendReservationEmails(reservation, restaurant) {
     });
   } catch (err) {
     console.error('Reservation email error:', err.message);
+  }
+}
+
+async function sendReservationUpdateEmails(previousReservation, updatedReservation, restaurant) {
+  const settings = await getEmailNotificationSettings();
+  const adminRecipients = splitRecipientEmails(settings.reservations_email);
+
+  if (!reservationTransporter) {
+    console.log('Reservation update email skipped (reservation mailbox not configured). Reservation:', updatedReservation.confirmation_code);
+    return;
+  }
+
+  const oldDetails = `Date: ${previousReservation.date}, Time: ${previousReservation.time}, Guests: ${previousReservation.persons}`;
+  const newDetails = `Date: ${updatedReservation.date}, Time: ${updatedReservation.time}, Guests: ${updatedReservation.persons}`;
+
+  try {
+    await reservationTransporter.sendMail({
+      from: `"Masakali Reservations" <${reservationEmailUser}>`,
+      to: updatedReservation.email,
+      subject: `Reservation Updated - ${updatedReservation.confirmation_code}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #fff; padding: 30px;">
+          <h1 style="color: #d4a843; text-align: center;">Masakali Indian Cuisine</h1>
+          <h2 style="text-align: center;">Reservation Updated</h2>
+          <div style="background: #1a1a1a; padding: 20px; border-radius: 10px; margin: 20px 0;">
+            <p><strong>Confirmation Code:</strong> ${updatedReservation.confirmation_code}</p>
+            <p><strong>Name:</strong> ${updatedReservation.name}</p>
+            <p><strong>Restaurant:</strong> ${restaurant?.name || 'Masakali California'}</p>
+            <p><strong>Updated Details:</strong> ${newDetails}</p>
+            <p><strong>Previous Details:</strong> ${oldDetails}</p>
+            ${updatedReservation.special_requests ? `<p><strong>Special Requests:</strong> ${updatedReservation.special_requests}</p>` : ''}
+          </div>
+          <p style="text-align: center; color: #888;">Your reservation details were updated successfully.</p>
+        </div>
+      `,
+    });
+
+    if (adminRecipients.length) {
+      await reservationTransporter.sendMail({
+        from: `"Masakali Reservations" <${reservationEmailUser}>`,
+        to: adminRecipients.join(', '),
+        subject: `Reservation Updated - ${updatedReservation.confirmation_code}`,
+        text: `Reservation updated:\nCode: ${updatedReservation.confirmation_code}\nName: ${updatedReservation.name}\nEmail: ${updatedReservation.email}\nPhone: ${updatedReservation.phone}\nBranch: ${restaurant?.name || 'Masakali California'}\nPrevious: ${oldDetails}\nUpdated: ${newDetails}`,
+      });
+    }
+  } catch (err) {
+    console.error('Reservation update email error:', err.message);
   }
 }
 
@@ -1198,9 +1317,15 @@ app.get('/api/reservations', authMiddleware, async (req, res) => {
 
 app.post('/api/reservations', async (req, res) => {
   const { restaurant_id, name, email, phone, date, time, persons, special_requests, geolocation } = req.body;
+  const normalizedEmail = normalizeEmail(email);
+  const normalizedPhone = normalizeReservationPhone(phone);
   const parsedGeolocation = parseReservationGeolocation(geolocation);
   const requestContext = await collectRequestContext(req);
   const confirmation_code = 'MAS-' + String(Date.now()).slice(-6);
+
+  if (!normalizedEmail || !normalizedPhone) {
+    return res.status(400).json({ error: 'Valid email and phone are required.' });
+  }
 
   if (db) {
     try {
@@ -1208,8 +1333,8 @@ app.post('/api/reservations', async (req, res) => {
         `INSERT INTO reservations (
           restaurant_id,
           name,
-          email,
-          phone,
+          normalizedEmail,
+          normalizedPhone,
           date,
           time,
           persons,
@@ -1290,7 +1415,11 @@ app.post('/api/reservations', async (req, res) => {
   const newReservation = {
     id: nextReservationId++,
     restaurant_id: parseInt(restaurant_id),
-    name, email, phone, date, time,
+    name,
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    date,
+    time,
     persons: parseInt(persons),
     special_requests: special_requests || null,
     geolocation_latitude: parsedGeolocation?.latitude || null,
@@ -1307,6 +1436,130 @@ app.post('/api/reservations', async (req, res) => {
   const restaurant = mockRestaurants.find(r => r.id === parseInt(restaurant_id));
   sendReservationEmails(newReservation, restaurant || null);
   res.json(newReservation);
+});
+
+app.post('/api/reservations/manage', async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const phone = normalizeReservationPhone(req.body?.phone);
+
+  if (!email || !phone) {
+    return res.status(400).json({ error: 'Email and phone are required.' });
+  }
+
+  if (db) {
+    try {
+      const [rows] = await db.query(
+        `SELECT r.*, rest.name as restaurant_name
+         FROM reservations r
+         JOIN restaurants rest ON r.restaurant_id = rest.id
+         WHERE LOWER(r.email) = ?
+         ORDER BY r.created_at DESC, r.id DESC`,
+        [email]
+      );
+
+      const matches = rows.filter((row) => reservationPhonesMatch(row.phone, phone));
+      return res.json(matches);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to load reservations.' });
+    }
+  }
+
+  const matches = sortReservationsNewestFirst(
+    mockReservations
+      .filter((row) => normalizeEmail(row.email) === email && reservationPhonesMatch(row.phone, phone))
+      .map((row) => ({
+        ...row,
+        restaurant_name: mockRestaurants.find((rest) => rest.id === row.restaurant_id)?.name,
+      }))
+  );
+
+  return res.json(matches);
+});
+
+app.put('/api/reservations/manage/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const lookupEmail = normalizeEmail(req.body?.lookup_email);
+  const lookupPhone = normalizeReservationPhone(req.body?.lookup_phone);
+  const updates = buildCustomerReservationUpdatePayload(req.body || {});
+
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid reservation id.' });
+  if (!lookupEmail || !lookupPhone) {
+    return res.status(400).json({ error: 'Lookup email and phone are required.' });
+  }
+  if (!Object.keys(updates).length) {
+    return res.status(400).json({ error: 'No valid fields provided for update.' });
+  }
+
+  if (db) {
+    try {
+      const [existingRows] = await db.query(
+        `SELECT r.*, rest.name as restaurant_name
+         FROM reservations r
+         JOIN restaurants rest ON r.restaurant_id = rest.id
+         WHERE r.id = ?
+         LIMIT 1`,
+        [id]
+      );
+
+      const existing = existingRows[0];
+      if (!existing) return res.status(404).json({ error: 'Reservation not found.' });
+
+      if (normalizeEmail(existing.email) !== lookupEmail || !reservationPhonesMatch(existing.phone, lookupPhone)) {
+        return res.status(403).json({ error: 'Reservation verification failed.' });
+      }
+
+      const updateFields = Object.keys(updates);
+      const updateValues = updateFields.map((field) => updates[field]);
+      const setClause = updateFields.map((field) => `${field} = ?`).join(', ');
+
+      await db.query(`UPDATE reservations SET ${setClause} WHERE id = ?`, [...updateValues, id]);
+
+      const [updatedRows] = await db.query(
+        `SELECT r.*, rest.name as restaurant_name
+         FROM reservations r
+         JOIN restaurants rest ON r.restaurant_id = rest.id
+         WHERE r.id = ?
+         LIMIT 1`,
+        [id]
+      );
+
+      const updated = updatedRows[0];
+      sendReservationUpdateEmails(existing, updated, {
+        id: updated.restaurant_id,
+        name: updated.restaurant_name,
+      });
+
+      return res.json(updated);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to update reservation.' });
+    }
+  }
+
+  const idx = mockReservations.findIndex((row) => row.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Reservation not found.' });
+
+  const existing = mockReservations[idx];
+  if (normalizeEmail(existing.email) !== lookupEmail || !reservationPhonesMatch(existing.phone, lookupPhone)) {
+    return res.status(403).json({ error: 'Reservation verification failed.' });
+  }
+
+  const updated = {
+    ...existing,
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+  mockReservations[idx] = updated;
+
+  const restaurant = mockRestaurants.find((rest) => rest.id === updated.restaurant_id);
+  const updatedResponse = {
+    ...updated,
+    restaurant_name: restaurant?.name,
+  };
+
+  sendReservationUpdateEmails(existing, updatedResponse, restaurant || null);
+  return res.json(updatedResponse);
 });
 
 app.put('/api/reservations/:id', authMiddleware, async (req, res) => {

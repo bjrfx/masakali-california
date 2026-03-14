@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/static/css/main.d3f15416.css",
-    "main.js": "/static/js/main.1b6143db.js",
+    "main.css": "/static/css/main.882b82b5.css",
+    "main.js": "/static/js/main.eb99aa6d.js",
     "static/media/masakali-intro.mp4": "/static/media/masakali-intro.17d34fa4eaeac5fd8eee.mp4",
     "static/media/re3stobar.webp": "/static/media/re3stobar.d2b3b605628e60cb0f98.webp",
     "static/media/stittsville1.webp": "/static/media/stittsville1.6d25e5665d4b5d97be81.webp",
@@ -12,11 +12,11 @@
     "static/media/rangde.webp": "/static/media/rangde.09a7e92971561e17aaed.webp",
     "static/media/stittsville2.webp": "/static/media/stittsville2.e52f063266a75302bde5.webp",
     "index.html": "/index.html",
-    "main.d3f15416.css.map": "/static/css/main.d3f15416.css.map",
-    "main.1b6143db.js.map": "/static/js/main.1b6143db.js.map"
+    "main.882b82b5.css.map": "/static/css/main.882b82b5.css.map",
+    "main.eb99aa6d.js.map": "/static/js/main.eb99aa6d.js.map"
   },
   "entrypoints": [
-    "static/css/main.d3f15416.css",
-    "static/js/main.1b6143db.js"
+    "static/css/main.882b82b5.css",
+    "static/js/main.eb99aa6d.js"
   ]
 }

@@ -60,6 +60,8 @@ export const api = {
     return apiCall(`/reservations${query ? `?${query}` : ''}`);
   },
   createReservation: (data) => apiCall('/reservations', { method: 'POST', body: JSON.stringify(data), auth: false }),
+  findManageReservations: (email, phone) => apiCall('/reservations/manage', { method: 'POST', body: JSON.stringify({ email, phone }), auth: false }),
+  updateManagedReservation: (id, data) => apiCall(`/reservations/manage/${id}`, { method: 'PUT', body: JSON.stringify(data), auth: false }),
   updateReservation: (id, data) => apiCall(`/reservations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteReservation: (id) => apiCall(`/reservations/${id}`, { method: 'DELETE' }),
 
