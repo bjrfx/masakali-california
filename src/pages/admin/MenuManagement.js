@@ -16,8 +16,24 @@ export default function AdminMenuManagement({ token }) {
   const emptyForm = { name: '', description: '', price: '', category_id: '', is_vegetarian: false, spice_level: 'medium', is_featured: false };
   const [form, setForm] = useState(emptyForm);
 
-  useEffect(() => { loadData(); }, []);
-  const loadData = async () => { try { const [items, cats] = await Promise.all([api.getMenu(), api.getCategories()]); setMenuItems(items); setCategories(cats); } catch (err) { console.error(err); } setLoading(false); };
+  const loadData = async ({ showLoader = false } = {}) => {
+    if (showLoader) setLoading(true);
+    try {
+      const [items, cats] = await Promise.all([api.getMenu(), api.getCategories()]);
+      setMenuItems(items);
+      setCategories(cats);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData({ showLoader: true });
+    const interval = setInterval(() => loadData(), 8000);
+    return () => clearInterval(interval);
+  }, []);
   const handleChange = (e) => { const { name, value, type, checked } = e.target; setForm({ ...form, [name]: type === 'checkbox' ? checked : value }); };
   const openCreate = () => { setEditItem(null); setForm(emptyForm); setShowModal(true); };
   const openEdit = (item) => { setEditItem(item); setForm({ name: item.name, description: item.description || '', price: item.price?.toString() || '', category_id: item.category_id?.toString() || '', is_vegetarian: item.is_vegetarian || false, spice_level: item.spice_level || 'medium', is_featured: item.is_featured || false }); setShowModal(true); };

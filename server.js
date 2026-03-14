@@ -66,6 +66,28 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS homepage_featured_dishes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        menu_item_key VARCHAR(120) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_menu_item_key (menu_item_key)
+      )
+    `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS testimonials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        text TEXT NOT NULL,
+        rating TINYINT NOT NULL DEFAULT 5,
+        branch VARCHAR(255) DEFAULT NULL,
+        sort_order INT NOT NULL DEFAULT 1,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
     try {
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_latitude DECIMAL(10, 8) NULL');
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_longitude DECIMAL(11, 8) NULL');
@@ -434,9 +456,18 @@ let mockContactInquiries = [
   { id: 2, name: 'Priyanka Shah', email: 'priyanka@example.com', phone: '15145559876', subject: 'feedback', message: 'Loved the butter chicken!', restaurant_id: 6, is_read: true, created_at: '2026-03-10T08:15:00' },
 ];
 
+let mockFeaturedDishKeys = [];
+
+let mockTestimonials = [
+  { id: 1, name: 'Sarah M.', text: 'The best Indian food in Ottawa! Butter chicken is absolutely divine. The ambiance is perfect for date night.', rating: 5, branch: 'Wellington', sort_order: 1, is_active: true },
+  { id: 2, name: 'James K.', text: 'Incredible biryani and tandoori. Every dish bursts with authentic flavors. We order catering regularly.', rating: 5, branch: 'Stittsville', sort_order: 2, is_active: true },
+  { id: 3, name: 'Priya S.', text: 'Feels like home cooking elevated to fine dining. The lamb chops are a must-try. Exceptional service every time.', rating: 5, branch: 'Restobar', sort_order: 3, is_active: true },
+];
+
 let nextReservationId = 9;
 let nextCateringId = 3;
 let nextContactId = 3;
+let nextTestimonialId = 4;
 
 // =====================================================
 // Email Transporter
@@ -510,6 +541,117 @@ function authMiddleware(req, res, next) {
   } catch (err) {
     return res.status(401).json({ error: 'Invalid token' });
   }
+}
+
+function getMenuItemKey(item) {
+  if (!item) return null;
+  const key = item.source_id ?? item.id;
+  if (key === undefined || key === null) return null;
+  return String(key);
+}
+
+function normalizeFeaturedDishKeys(input) {
+  if (!Array.isArray(input)) return [];
+  const trimmed = input
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+  return [...new Set(trimmed)].slice(0, 6);
+}
+
+function clampRating(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 5;
+  return Math.max(1, Math.min(5, Math.round(parsed)));
+}
+
+function isTableMissingError(err) {
+  return err && err.code === 'ER_NO_SUCH_TABLE';
+}
+
+async function ensureHomepageContentTables() {
+  if (!db) return;
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS homepage_featured_dishes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      menu_item_key VARCHAR(120) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_menu_item_key (menu_item_key)
+    )
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS testimonials (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      text TEXT NOT NULL,
+      rating TINYINT NOT NULL DEFAULT 5,
+      branch VARCHAR(255) DEFAULT NULL,
+      sort_order INT NOT NULL DEFAULT 1,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function getAllMenuItems() {
+  if (db) {
+    try {
+      const [rows] = await db.query(
+        `SELECT mi.*, mc.name as category_name
+         FROM menu_items mi
+         JOIN menu_categories mc ON mi.category_id = mc.id
+         WHERE mi.is_active = 1
+         ORDER BY mc.sort_order, mi.name`
+      );
+      return rows;
+    } catch (err) {
+      // In this deployment, menu is served by Clover and local menu tables may not exist.
+      if (!isTableMissingError(err)) throw err;
+    }
+  }
+
+  const cloverMenu = await fetchCloverMenuData();
+  return cloverMenu.items;
+}
+
+async function getFeaturedDishesResolved() {
+  const menuItems = await getAllMenuItems();
+
+  if (db) {
+    await ensureHomepageContentTables();
+    const [rows] = await db.query('SELECT menu_item_key, sort_order FROM homepage_featured_dishes ORDER BY sort_order ASC, id ASC');
+    const selectedKeys = rows.map((row) => String(row.menu_item_key));
+    const keyToItem = new Map(menuItems.map((item) => [getMenuItemKey(item), item]));
+    const selectedItems = selectedKeys.map((key) => keyToItem.get(key)).filter(Boolean);
+
+    if (selectedItems.length) {
+      return selectedItems.slice(0, 6);
+    }
+  }
+
+  if (mockFeaturedDishKeys.length) {
+    const keyToItem = new Map(menuItems.map((item) => [getMenuItemKey(item), item]));
+    return mockFeaturedDishKeys
+      .map((key) => keyToItem.get(String(key)))
+      .filter(Boolean)
+      .slice(0, 6);
+  }
+
+  return menuItems.filter((item) => Boolean(item.is_featured)).slice(0, 6);
+}
+
+function sanitizeTestimonialPayload(body = {}) {
+  return {
+    name: String(body.name || '').trim(),
+    text: String(body.text || '').trim(),
+    branch: String(body.branch || '').trim() || null,
+    rating: clampRating(body.rating),
+    sort_order: Number.isFinite(Number(body.sort_order)) ? Number(body.sort_order) : 1,
+    is_active: typeof body.is_active === 'boolean' ? body.is_active : true,
+  };
 }
 
 // =====================================================
@@ -602,16 +744,31 @@ app.get('/api/categories', async (req, res) => {
 
 app.get('/api/menu', async (req, res) => {
   const { category, branch, featured } = req.query;
+  if (featured === 'true') {
+    try {
+      let featuredItems = await getFeaturedDishesResolved();
+      if (category) {
+        const categoryId = parseInt(category, 10);
+        featuredItems = featuredItems.filter((item) => item.category_id === categoryId);
+      }
+      return res.json(featuredItems);
+    } catch (err) {
+      console.error('Featured dishes fetch failed:', err.message);
+      return res.status(502).json({ error: 'Failed to fetch featured dishes' });
+    }
+  }
+
   if (db) {
     try {
       let query = 'SELECT mi.*, mc.name as category_name FROM menu_items mi JOIN menu_categories mc ON mi.category_id = mc.id WHERE mi.is_active = 1';
       const params = [];
       if (category) { query += ' AND mi.category_id = ?'; params.push(category); }
-      if (featured === 'true') { query += ' AND mi.is_featured = 1'; }
       query += ' ORDER BY mc.sort_order, mi.name';
       const [rows] = await db.query(query, params);
       return res.json(rows);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) console.error(err);
+    }
   }
 
   try {
@@ -622,7 +779,6 @@ app.get('/api/menu', async (req, res) => {
       const categoryId = parseInt(category, 10);
       items = items.filter(item => item.category_id === categoryId);
     }
-    if (featured === 'true') items = items.filter(item => item.is_featured);
 
     return res.json(items);
   } catch (err) {
@@ -636,7 +792,9 @@ app.get('/api/menu/:id', async (req, res) => {
     try {
       const [rows] = await db.query('SELECT * FROM menu_items WHERE id = ?', [req.params.id]);
       if (rows.length) return res.json(rows[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      if (!isTableMissingError(err)) console.error(err);
+    }
   }
 
   try {
@@ -688,6 +846,170 @@ app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
     } catch (err) { console.error(err); }
   }
   return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
+});
+
+// --- Homepage Content ---
+app.get('/api/featured-dishes', async (req, res) => {
+  try {
+    const items = await getFeaturedDishesResolved();
+    return res.json(items.slice(0, 6));
+  } catch (err) {
+    console.error('Featured dishes endpoint error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch featured dishes' });
+  }
+});
+
+app.put('/api/admin/featured-dishes', authMiddleware, async (req, res) => {
+  const keys = normalizeFeaturedDishKeys(req.body?.itemKeys);
+  if (keys.length > 6) {
+    return res.status(400).json({ error: 'You can feature a maximum of 6 dishes' });
+  }
+
+  try {
+    const menuItems = await getAllMenuItems();
+    const validKeys = new Set(menuItems.map((item) => getMenuItemKey(item)).filter(Boolean));
+    const invalidKeys = keys.filter((key) => !validKeys.has(key));
+    if (invalidKeys.length) {
+      return res.status(400).json({ error: 'Some selected dishes are invalid or no longer available' });
+    }
+
+    if (db) {
+      await ensureHomepageContentTables();
+      await db.query('DELETE FROM homepage_featured_dishes');
+      for (let i = 0; i < keys.length; i += 1) {
+        await db.query('INSERT INTO homepage_featured_dishes (menu_item_key, sort_order) VALUES (?, ?)', [keys[i], i + 1]);
+      }
+    } else {
+      mockFeaturedDishKeys = [...keys];
+    }
+
+    const selected = await getFeaturedDishesResolved();
+    return res.json({ success: true, items: selected.slice(0, 6) });
+  } catch (err) {
+    console.error('Save featured dishes failed:', err.message);
+    return res.status(500).json({ error: 'Failed to save featured dishes' });
+  }
+});
+
+app.get('/api/testimonials', async (req, res) => {
+  if (db) {
+    try {
+      await ensureHomepageContentTables();
+      const [rows] = await db.query(
+        'SELECT * FROM testimonials WHERE is_active = 1 ORDER BY sort_order ASC, id DESC'
+      );
+      return res.json(rows);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to fetch testimonials' });
+    }
+  }
+
+  return res.json(
+    mockTestimonials
+      .filter((item) => item.is_active)
+      .sort((a, b) => (a.sort_order - b.sort_order) || (b.id - a.id))
+  );
+});
+
+app.get('/api/admin/testimonials', authMiddleware, async (req, res) => {
+  if (db) {
+    try {
+      await ensureHomepageContentTables();
+      const [rows] = await db.query('SELECT * FROM testimonials ORDER BY sort_order ASC, id DESC');
+      return res.json(rows);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to fetch testimonials' });
+    }
+  }
+
+  return res.json([...mockTestimonials].sort((a, b) => (a.sort_order - b.sort_order) || (b.id - a.id)));
+});
+
+app.post('/api/admin/testimonials', authMiddleware, async (req, res) => {
+  const payload = sanitizeTestimonialPayload(req.body);
+  if (!payload.name || !payload.text) {
+    return res.status(400).json({ error: 'Name and testimonial text are required' });
+  }
+
+  if (db) {
+    try {
+      await ensureHomepageContentTables();
+      const [result] = await db.query(
+        'INSERT INTO testimonials (name, text, rating, branch, sort_order, is_active) VALUES (?, ?, ?, ?, ?, ?)',
+        [payload.name, payload.text, payload.rating, payload.branch, payload.sort_order, payload.is_active]
+      );
+      const [rows] = await db.query('SELECT * FROM testimonials WHERE id = ?', [result.insertId]);
+      return res.json(rows[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to create testimonial' });
+    }
+  }
+
+  const newTestimonial = {
+    id: nextTestimonialId++,
+    ...payload,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockTestimonials.unshift(newTestimonial);
+  return res.json(newTestimonial);
+});
+
+app.put('/api/admin/testimonials/:id', authMiddleware, async (req, res) => {
+  const payload = sanitizeTestimonialPayload(req.body);
+  if (!payload.name || !payload.text) {
+    return res.status(400).json({ error: 'Name and testimonial text are required' });
+  }
+
+  if (db) {
+    try {
+      await ensureHomepageContentTables();
+      await db.query(
+        `UPDATE testimonials
+         SET name = ?,
+             text = ?,
+             rating = ?,
+             branch = ?,
+             sort_order = ?,
+             is_active = ?,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [payload.name, payload.text, payload.rating, payload.branch, payload.sort_order, payload.is_active, req.params.id]
+      );
+      const [rows] = await db.query('SELECT * FROM testimonials WHERE id = ?', [req.params.id]);
+      if (!rows.length) return res.status(404).json({ error: 'Not found' });
+      return res.json(rows[0]);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to update testimonial' });
+    }
+  }
+
+  const idx = mockTestimonials.findIndex((item) => item.id === parseInt(req.params.id, 10));
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  mockTestimonials[idx] = { ...mockTestimonials[idx], ...payload, updated_at: new Date().toISOString() };
+  return res.json(mockTestimonials[idx]);
+});
+
+app.delete('/api/admin/testimonials/:id', authMiddleware, async (req, res) => {
+  if (db) {
+    try {
+      await ensureHomepageContentTables();
+      await db.query('DELETE FROM testimonials WHERE id = ?', [req.params.id]);
+      return res.json({ success: true });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to delete testimonial' });
+    }
+  }
+
+  const idx = mockTestimonials.findIndex((item) => item.id === parseInt(req.params.id, 10));
+  if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  mockTestimonials.splice(idx, 1);
+  return res.json({ success: true });
 });
 
 // --- Reservations ---
@@ -1153,14 +1475,22 @@ app.get('/api/analytics/overview', authMiddleware, async (req, res) => {
       const [confirmedRes] = await db.query("SELECT COUNT(*) as count FROM reservations WHERE status = 'confirmed'");
       const [todayRes] = await db.query("SELECT COUNT(*) as count FROM reservations WHERE date = CURDATE()");
       const [totalCatering] = await db.query('SELECT COUNT(*) as count FROM catering_requests');
-      const [totalMenuItems] = await db.query('SELECT COUNT(*) as count FROM menu_items WHERE is_active = 1');
+      let totalMenuItemsCount = 0;
+      try {
+        const [totalMenuItems] = await db.query('SELECT COUNT(*) as count FROM menu_items WHERE is_active = 1');
+        totalMenuItemsCount = Number(totalMenuItems?.[0]?.count || 0);
+      } catch (err) {
+        if (!isTableMissingError(err)) throw err;
+        const cloverMenu = await fetchCloverMenuData();
+        totalMenuItemsCount = (cloverMenu.items || []).length;
+      }
       const [branchStats] = await db.query('SELECT r.name, COUNT(res.id) as count FROM restaurants r LEFT JOIN reservations res ON r.id = res.restaurant_id GROUP BY r.id, r.name');
       return res.json({
         totalReservations: totalRes[0].count,
         confirmedReservations: confirmedRes[0].count,
         todayReservations: todayRes[0].count,
         totalCateringRequests: totalCatering[0].count,
-        totalMenuItems: totalMenuItems[0].count,
+        totalMenuItems: totalMenuItemsCount,
         branchStats,
       });
     } catch (err) { console.error(err); }

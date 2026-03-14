@@ -153,6 +153,32 @@ CREATE TABLE IF NOT EXISTS contact_inquiries (
 );
 
 -- =====================================================
+-- Homepage Featured Dishes
+-- =====================================================
+CREATE TABLE IF NOT EXISTS homepage_featured_dishes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  menu_item_key VARCHAR(120) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_menu_item_key (menu_item_key)
+);
+
+-- =====================================================
+-- Testimonials
+-- =====================================================
+CREATE TABLE IF NOT EXISTS testimonials (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  text TEXT NOT NULL,
+  rating TINYINT NOT NULL DEFAULT 5,
+  branch VARCHAR(255) DEFAULT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =====================================================
 -- Admins Table
 -- =====================================================
 CREATE TABLE IF NOT EXISTS admins (
@@ -257,3 +283,23 @@ ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_as VARCHAR(150) NULL;
 ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_mobile BOOLEAN NULL;
 ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_proxy BOOLEAN NULL;
 ALTER TABLE contact_inquiries ADD COLUMN IF NOT EXISTS ip_hosting BOOLEAN NULL;
+
+CREATE TABLE IF NOT EXISTS homepage_featured_dishes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  menu_item_key VARCHAR(120) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_menu_item_key (menu_item_key)
+);
+
+CREATE TABLE IF NOT EXISTS testimonials (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  text TEXT NOT NULL,
+  rating TINYINT NOT NULL DEFAULT 5,
+  branch VARCHAR(255) DEFAULT NULL,
+  sort_order INT NOT NULL DEFAULT 1,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

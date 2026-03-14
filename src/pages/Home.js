@@ -37,12 +37,6 @@ function AnimatedSection({ children, className = '', delay = 0 }) {
   );
 }
 
-const reviews = [
-  { name: 'Sarah M.', text: 'The best Indian food in Ottawa! Butter chicken is absolutely divine. The ambiance is perfect for date night.', rating: 5, branch: 'Wellington' },
-  { name: 'James K.', text: 'Incredible biryani and tandoori. Every dish bursts with authentic flavors. We order catering regularly.', rating: 5, branch: 'Stittsville' },
-  { name: 'Priya S.', text: 'Feels like home cooking elevated to fine dining. The lamb chops are a must-try. Exceptional service every time.', rating: 5, branch: 'Restobar' },
-];
-
 function HeroSlideshow() {
   const [current, setCurrent] = useState(0);
 
@@ -142,11 +136,47 @@ function CountdownTimer() {
   );
 }
 
+function getFeaturedDishImage(item) {
+  if (!item) return null;
+
+  const fromImagesArray = Array.isArray(item.images)
+    ? (item.images[0]?.source || item.images[0]?.url || item.images[0]?.imageUrl || item.images[0]?.image_url)
+    : null;
+
+  const source = item.image_url || item.imageUrl || fromImagesArray || null;
+  if (!source) return null;
+
+  if (typeof source === 'string' && source.startsWith('//')) return `https:${source}`;
+  return source;
+}
+
 export default function Home() {
   const [featuredItems, setFeaturedItems] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
 
   useEffect(() => {
-    api.getMenu({ featured: 'true' }).then(items => setFeaturedItems(items.slice(0, 6))).catch(console.error);
+    const loadHomepageContent = async () => {
+      const [featuredResult, testimonialResult] = await Promise.allSettled([
+        api.getFeaturedDishes(),
+        api.getTestimonials(),
+      ]);
+
+      if (featuredResult.status === 'fulfilled') {
+        setFeaturedItems((featuredResult.value || []).slice(0, 6));
+      } else {
+        console.error(featuredResult.reason);
+      }
+
+      if (testimonialResult.status === 'fulfilled') {
+        setTestimonials((testimonialResult.value || []).slice(0, 6));
+      } else {
+        console.error(testimonialResult.reason);
+      }
+    };
+
+    loadHomepageContent();
+    const interval = setInterval(loadHomepageContent, 8000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -422,12 +452,26 @@ export default function Home() {
           </AnimatedSection>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredItems.map((item, i) => (
-              <AnimatedSection key={item.id} delay={i * 0.1}>
-                <div className="group bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden card-hover gold-glow-hover shadow-sm dark:shadow-none">
-                  <div className="h-48 bg-gradient-to-br from-amber-100 dark:from-amber-900/20 to-neutral-100 dark:to-neutral-900 flex items-center justify-center">
-                    <ChefHat size={48} className="text-amber-500/30 group-hover:text-amber-400/50 transition-colors" />
-                  </div>
+            {featuredItems.map((item, i) => {
+              const imageUrl = getFeaturedDishImage(item);
+
+              return (
+                <AnimatedSection key={item.id} delay={i * 0.1}>
+                  <div className="group bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl overflow-hidden card-hover gold-glow-hover shadow-sm dark:shadow-none">
+                    <div className="h-48 bg-gradient-to-br from-amber-100 dark:from-amber-900/20 to-neutral-100 dark:to-neutral-900 flex items-center justify-center relative overflow-hidden">
+                      <ChefHat size={48} className="text-amber-500/30 group-hover:text-amber-400/50 transition-colors absolute z-10" />
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt={item.name || 'Featured dish'}
+                          className="w-full h-full object-cover relative z-20"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.remove();
+                          }}
+                        />
+                      )}
+                    </div>
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="text-neutral-900 dark:text-white font-semibold text-lg">{item.name}</h3>
@@ -449,8 +493,9 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-              </AnimatedSection>
-            ))}
+                </AnimatedSection>
+              );
+            })}
           </div>
 
           <AnimatedSection className="text-center mt-12">
@@ -576,12 +621,12 @@ export default function Home() {
           </AnimatedSection>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {reviews.map((review, i) => (
-              <AnimatedSection key={review.name} delay={i * 0.15}>
+            {testimonials.map((review, i) => (
+              <AnimatedSection key={review.id || `${review.name}-${i}`} delay={i * 0.15}>
                 <div className="bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 card-hover relative shadow-sm dark:shadow-none">
                   <Quote size={40} className="text-amber-500/10 absolute top-6 right-6" />
                   <div className="flex gap-1 mb-4">
-                    {[...Array(review.rating)].map((_, j) => (
+                    {[...Array(Math.max(1, Math.min(5, Number(review.rating) || 5)))].map((_, j) => (
                       <Star key={j} size={16} className="text-amber-400 fill-amber-400" />
                     ))}
                   </div>
