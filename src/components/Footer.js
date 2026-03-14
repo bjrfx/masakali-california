@@ -13,7 +13,7 @@ const footerLinks = {
     { name: 'Reserve a Table', path: '/reservations' },
     { name: 'Catering Services', path: '/catering' },
     { name: 'Contact Us', path: '/contact' },
-    { name: 'Admin Portal', path: '/admin/login' },
+    // { name: 'Admin Portal', path: '/admin/login' },
   ],
 };
 
