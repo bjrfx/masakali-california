@@ -17,9 +17,21 @@ export default function AdminDashboard({ token }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.getAnalytics(), api.getReservations()])
-      .then(([analyticsData, reservations]) => { setAnalytics(analyticsData); setRecentReservations(reservations.slice(0, 5)); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
+    const loadData = async () => {
+      try {
+        const [analyticsData, reservations] = await Promise.all([api.getAnalytics(), api.getReservations()]);
+        setAnalytics(analyticsData);
+        setRecentReservations((reservations || []).slice(0, 5));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+    const interval = setInterval(loadData, 8000);
+    return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {
@@ -100,6 +112,7 @@ export default function AdminDashboard({ token }) {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Manage Menu', path: '/admin/menu', icon: UtensilsCrossed, desc: 'Add, edit, delete items' },
+          { label: 'Homepage Content', path: '/admin/homepage', icon: TrendingUp, desc: 'Featured dishes & testimonials' },
           { label: 'Reservations', path: '/admin/reservations', icon: CalendarDays, desc: 'View & manage bookings' },
           { label: 'Catering', path: '/admin/catering', icon: Users, desc: 'Manage catering requests' },
           { label: 'Contact', path: '/admin/contact', icon: MapPin, desc: 'Manage contact inquiries' },

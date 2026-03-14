@@ -24,6 +24,10 @@ export default function AdminCateringManagement() {
       try {
         const data = await api.getCateringRequests();
         setRequests(data || []);
+        if (selected?.id) {
+          const refreshed = (data || []).find((row) => row.id === selected.id);
+          if (refreshed) setSelected(refreshed);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -31,7 +35,9 @@ export default function AdminCateringManagement() {
       }
     };
     load();
-  }, []);
+    const interval = setInterval(load, 8000);
+    return () => clearInterval(interval);
+  }, [selected?.id]);
 
   const filtered = requests.filter((item) => {
     const q = search.trim().toLowerCase();

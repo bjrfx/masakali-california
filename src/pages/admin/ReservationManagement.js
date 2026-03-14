@@ -22,8 +22,28 @@ export default function AdminReservationManagement({ token }) {
   const [selectedRes, setSelectedRes] = useState(null);
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => { loadData(); }, []);
-  const loadData = async () => { try { const [resData, restData] = await Promise.all([api.getReservations(), api.getRestaurants()]); setReservations(resData); setRestaurants(restData); } catch (err) { console.error(err); } setLoading(false); };
+  const loadData = async ({ showLoader = false } = {}) => {
+    if (showLoader) setLoading(true);
+    try {
+      const [resData, restData] = await Promise.all([api.getReservations(), api.getRestaurants()]);
+      setReservations(resData);
+      setRestaurants(restData);
+      if (selectedRes?.id) {
+        const refreshed = (resData || []).find((row) => row.id === selectedRes.id);
+        if (refreshed) setSelectedRes(refreshed);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData({ showLoader: true });
+    const interval = setInterval(() => loadData(), 8000);
+    return () => clearInterval(interval);
+  }, [selectedRes?.id]);
   const updateStatus = async (id, status) => { setUpdating(true); try { await api.updateReservation(id, { status }); setReservations(reservations.map(r => r.id === id ? { ...r, status } : r)); if (selectedRes?.id === id) setSelectedRes({ ...selectedRes, status }); } catch (err) { console.error(err); } setUpdating(false); };
   const deleteReservation = async (id) => { try { await api.deleteReservation(id); setReservations(reservations.filter(r => r.id !== id)); setSelectedRes(null); } catch (err) { console.error(err); } };
   const filtered = reservations.filter(r => { if (filterBranch && r.restaurant_id !== parseInt(filterBranch)) return false; if (filterStatus && r.status !== filterStatus) return false; if (filterDate && r.date !== filterDate) return false; if (search && !r.name?.toLowerCase().includes(search.toLowerCase()) && !r.email?.toLowerCase().includes(search.toLowerCase()) && !r.confirmation_code?.toLowerCase().includes(search.toLowerCase())) return false; return true; });

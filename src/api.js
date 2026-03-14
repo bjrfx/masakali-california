@@ -43,6 +43,15 @@ export const api = {
   updateMenuItem: (id, data) => apiCall(`/menu/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteMenuItem: (id) => apiCall(`/menu/${id}`, { method: 'DELETE' }),
 
+  // Homepage Content
+  getFeaturedDishes: () => apiCall('/featured-dishes', { auth: false }),
+  updateFeaturedDishes: (itemKeys) => apiCall('/admin/featured-dishes', { method: 'PUT', body: JSON.stringify({ itemKeys }) }),
+  getTestimonials: () => apiCall('/testimonials', { auth: false }),
+  getAdminTestimonials: () => apiCall('/admin/testimonials'),
+  createTestimonial: (data) => apiCall('/admin/testimonials', { method: 'POST', body: JSON.stringify(data) }),
+  updateTestimonial: (id, data) => apiCall(`/admin/testimonials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTestimonial: (id) => apiCall(`/admin/testimonials/${id}`, { method: 'DELETE' }),
+
   // Reservations
   getReservations: (params = {}) => {
     const query = new URLSearchParams(params).toString();

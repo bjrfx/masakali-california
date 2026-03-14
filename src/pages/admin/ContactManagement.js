@@ -14,6 +14,10 @@ export default function AdminContactManagement() {
       try {
         const data = await api.getContactInquiries();
         setInquiries(data || []);
+        if (selected?.id) {
+          const refreshed = (data || []).find((row) => row.id === selected.id);
+          if (refreshed) setSelected(refreshed);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -21,7 +25,9 @@ export default function AdminContactManagement() {
       }
     };
     load();
-  }, []);
+    const interval = setInterval(load, 8000);
+    return () => clearInterval(interval);
+  }, [selected?.id]);
 
   const filtered = inquiries.filter((item) => {
     const q = search.trim().toLowerCase();
