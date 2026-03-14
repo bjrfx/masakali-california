@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { CalendarDays, Clock, Users, MapPin, Check, Loader2, ArrowRight, Phone, Mail, MessageSquare } from 'lucide-react';
 import api from '../api';
@@ -119,6 +120,11 @@ export default function Reservations() {
               Book your dining experience at any Masakali location.
               Instant confirmation with email notification.
             </p>
+            <div className="mt-6">
+              <Link to="/manage-reservations" className="btn-outline-gold">
+                Manage Existing Reservation
+              </Link>
+            </div>
           </AnimatedSection>
         </div>
       </section>

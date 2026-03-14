@@ -8,6 +8,7 @@ import About from './pages/About';
 import Menu from './pages/Menu';
 import Locations from './pages/Locations';
 import Reservations from './pages/Reservations';
+import ManageReservations from './pages/ManageReservations';
 import Catering from './pages/Catering';
 import Contact from './pages/Contact';
 import AdminLogin from './pages/admin/Login';
@@ -69,6 +70,7 @@ function App() {
           <Route path="/menu" element={<><Navbar /><Menu /><Footer /></>} />
           <Route path="/locations" element={<><Navbar /><Locations /><Footer /></>} />
           <Route path="/reservations" element={<><Navbar /><Reservations /><Footer /></>} />
+          <Route path="/manage-reservations" element={<><Navbar /><ManageReservations /><Footer /></>} />
           <Route path="/catering" element={<><Navbar /><Catering /><Footer /></>} />
           <Route path="/contact" element={<><Navbar /><Contact /><Footer /></>} />
 

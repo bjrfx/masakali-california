@@ -245,6 +245,17 @@ export default function Home() {
               Explore Menu
             </Link>
           </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.75 }}
+            className="mt-4"
+          >
+            <Link to="/manage-reservations" className="btn-outline-gold !px-8 !py-3">
+              <Clock size={18} className="mr-2" /> Manage Reservations
+            </Link>
+          </motion.div>
         </div>
 
         {/* Scroll indicator */}
@@ -600,6 +611,9 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link to="/reservations" className="btn-gold text-lg !px-10 !py-4">
                 <CalendarDays size={20} className="mr-2" /> Reserve a Table
+              </Link>
+              <Link to="/manage-reservations" className="btn-outline-gold text-lg !px-10 !py-4">
+                <Clock size={20} className="mr-2" /> Manage Reservations
               </Link>
               <Link to="/catering" className="btn-outline-gold text-lg !px-10 !py-4">
                 <Users size={20} className="mr-2" /> Catering Services
