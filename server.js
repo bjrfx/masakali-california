@@ -17,7 +17,6 @@ try { require('dotenv').config(); } catch (e) { }
 const app = express();
 const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'masakali_secret_2024';
-const CLOVER_MENU_URL = 'https://www.clover.com/oloservice/v1/merchants/P62BGGNV7NPE1/menu?orderType=PICKUP';
 const IP_API_BASE_URL = 'http://ip-api.com/json';
 
 // =====================================================
@@ -362,16 +361,6 @@ async function collectRequestContext(req) {
   };
 }
 
-function getCloverImageUrl(item) {
-  const primaryImage = Array.isArray(item.images) ? item.images[0] : null;
-  const source = primaryImage?.source || item.imageUrl || item.image_url || '';
-  if (!source) return null;
-
-  if (source.startsWith('http://') || source.startsWith('https://')) return source;
-  if (source.startsWith('//')) return `https:${source}`;
-  return source;
-}
-
 async function fetchTempMenuData() {
   if (!db) throw new Error('Database not connected');
 
@@ -596,83 +585,6 @@ async function deleteTempMenuItem(itemId) {
   await db.query('DELETE FROM temp_category_items_stittsville WHERE item_id = ?', [itemId]);
   const [result] = await db.query('DELETE FROM temp_items_stittsville WHERE id = ?', [itemId]);
   return Boolean(result.affectedRows);
-}
-
-async function fetchCloverMenuData() {
-  const response = await fetch(CLOVER_MENU_URL);
-  if (!response.ok) {
-    throw new Error(`Clover menu fetch failed with status ${response.status}`);
-  }
-
-  const raw = await response.json();
-  const rawCategories = toArray(raw.categories);
-  const rawItems = toArray(raw.items);
-  const rawItemById = new Map(rawItems.map(item => [String(item.id), item]));
-
-  const normalizedCategories = rawCategories
-    .map((category, index) => ({
-      id: numericId(category.id, `cat-${index}`),
-      name: category.name || 'Menu',
-      slug: String(category.name || 'menu').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-      sort_order: Number(category.sortOrder ?? category.sort_order ?? index + 1),
-      source_id: String(category.id),
-      item_ids: Array.isArray(category.items) ? category.items.map(String) : [],
-    }))
-    .sort((a, b) => a.sort_order - b.sort_order);
-
-  const categoryIdMap = new Map(normalizedCategories.map(category => [category.source_id, category.id]));
-  const normalizedItems = [];
-
-  normalizedCategories.forEach((category) => {
-    category.item_ids.forEach((itemId, itemIndex) => {
-      const item = rawItemById.get(itemId);
-      if (!item || item.available === false) return;
-
-      normalizedItems.push({
-        id: numericId(item.id, `item-${category.id}-${itemIndex}`),
-        source_id: String(item.id),
-        name: item.name || 'Menu Item',
-        description: item.description || '',
-        price: Number(item.price || 0) / 100,
-        image_url: getCloverImageUrl(item),
-        images: toArray(item.images),
-        category_id: category.id,
-        category_name: category.name,
-        is_vegetarian: Boolean(item.isVegetarian ?? item.vegetarian ?? item.is_vegeterian),
-        spice_level: normalizeSpiceLevel(item.spiceLevel || item.spice_level),
-        is_featured: Boolean(item.isFeatured ?? item.featured),
-      });
-    });
-  });
-
-  rawItems.forEach((item, index) => {
-    const alreadyIncluded = normalizedItems.some(normalized => normalized.source_id === String(item.id));
-    if (alreadyIncluded || item.available === false) return;
-
-    const itemCategorySourceId = String(item.categoryId || item.category_id || '');
-    const categoryId = categoryIdMap.get(itemCategorySourceId) || normalizedCategories[0]?.id || 1;
-    const categoryName = normalizedCategories.find(category => category.id === categoryId)?.name || 'Menu';
-
-    normalizedItems.push({
-      id: numericId(item.id, `item-fallback-${index}`),
-      source_id: String(item.id),
-      name: item.name || 'Menu Item',
-      description: item.description || '',
-      price: Number(item.price || 0) / 100,
-      image_url: getCloverImageUrl(item),
-      images: toArray(item.images),
-      category_id: categoryId,
-      category_name: categoryName,
-      is_vegetarian: Boolean(item.isVegetarian ?? item.vegetarian ?? item.is_vegeterian),
-      spice_level: normalizeSpiceLevel(item.spiceLevel || item.spice_level),
-      is_featured: Boolean(item.isFeatured ?? item.featured),
-    });
-  });
-
-  return {
-    categories: normalizedCategories.map(({ source_id, item_ids, ...category }) => category),
-    items: normalizedItems,
-  };
 }
 
 let mockReservations = [
@@ -1087,7 +999,7 @@ async function getAllMenuItems() {
       );
       return rows;
     } catch (err) {
-      // In this deployment, menu is served by Clover and local menu tables may not exist.
+      // In some deployments local menu tables may not exist yet.
       if (!isTableMissingError(err)) throw err;
 
       try {
@@ -1099,8 +1011,7 @@ async function getAllMenuItems() {
     }
   }
 
-  const cloverMenu = await fetchCloverMenuData();
-  return cloverMenu.items;
+  return [];
 }
 
 async function getFeaturedDishesResolved() {
@@ -1232,13 +1143,8 @@ app.get('/api/categories', async (req, res) => {
       }
     }
   }
-  try {
-    const cloverMenu = await fetchCloverMenuData();
-    return res.json(cloverMenu.categories);
-  } catch (err) {
-    console.error('Clover categories fetch failed:', err.message);
-    return res.status(502).json({ error: 'Failed to fetch categories from Clover' });
-  }
+
+  return res.status(503).json({ error: 'Menu categories are unavailable because MySQL is not connected.' });
 });
 
 app.get('/api/menu', async (req, res) => {
@@ -1282,20 +1188,7 @@ app.get('/api/menu', async (req, res) => {
     }
   }
 
-  try {
-    const cloverMenu = await fetchCloverMenuData();
-    let items = [...cloverMenu.items];
-
-    if (category) {
-      const categoryId = parseInt(category, 10);
-      items = items.filter(item => item.category_id === categoryId);
-    }
-
-    return res.json(items);
-  } catch (err) {
-    console.error('Clover menu fetch failed:', err.message);
-    return res.status(502).json({ error: 'Failed to fetch menu from Clover' });
-  }
+  return res.status(503).json({ error: 'Menu data is unavailable because MySQL is not connected.' });
 });
 
 app.get('/api/menu/:id', async (req, res) => {
@@ -1318,15 +1211,7 @@ app.get('/api/menu/:id', async (req, res) => {
     }
   }
 
-  try {
-    const cloverMenu = await fetchCloverMenuData();
-    const id = parseInt(req.params.id, 10);
-    const item = cloverMenu.items.find(menuItem => menuItem.id === id);
-    return item ? res.json(item) : res.status(404).json({ error: 'Not found' });
-  } catch (err) {
-    console.error('Clover menu item fetch failed:', err.message);
-    return res.status(502).json({ error: 'Failed to fetch menu item from Clover' });
-  }
+  return res.status(503).json({ error: 'Menu data is unavailable because MySQL is not connected.' });
 });
 
 app.post('/api/menu', authMiddleware, async (req, res) => {
@@ -1356,7 +1241,7 @@ app.post('/api/menu', authMiddleware, async (req, res) => {
       }
     }
   }
-  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
+  return res.status(503).json({ error: 'Menu is unavailable because MySQL is not connected.' });
 });
 
 app.put('/api/menu/:id', authMiddleware, async (req, res) => {
@@ -1386,7 +1271,7 @@ app.put('/api/menu/:id', authMiddleware, async (req, res) => {
       }
     }
   }
-  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
+  return res.status(503).json({ error: 'Menu is unavailable because MySQL is not connected.' });
 });
 
 app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
@@ -1409,7 +1294,7 @@ app.delete('/api/menu/:id', authMiddleware, async (req, res) => {
       }
     }
   }
-  return res.status(503).json({ error: 'Menu is managed by Clover in this environment (read-only).' });
+  return res.status(503).json({ error: 'Menu is unavailable because MySQL is not connected.' });
 });
 
 // --- Homepage Content ---
@@ -2213,8 +2098,8 @@ app.get('/api/analytics/overview', authMiddleware, async (req, res) => {
         totalMenuItemsCount = Number(totalMenuItems?.[0]?.count || 0);
       } catch (err) {
         if (!isTableMissingError(err)) throw err;
-        const cloverMenu = await fetchCloverMenuData();
-        totalMenuItemsCount = (cloverMenu.items || []).length;
+        const tempMenu = await fetchTempMenuData();
+        totalMenuItemsCount = (tempMenu.items || []).length;
       }
       const [branchStats] = await db.query('SELECT r.name, COUNT(res.id) as count FROM restaurants r LEFT JOIN reservations res ON r.id = res.restaurant_id GROUP BY r.id, r.name');
       return res.json({
@@ -2233,12 +2118,7 @@ app.get('/api/analytics/overview', authMiddleware, async (req, res) => {
     count: mockReservations.filter(res => res.restaurant_id === r.id).length,
   }));
   let totalMenuItems = 0;
-  try {
-    const cloverMenu = await fetchCloverMenuData();
-    totalMenuItems = cloverMenu.items.length;
-  } catch (err) {
-    console.error('Clover menu count fetch failed:', err.message);
-  }
+  // Keep as 0 in mock mode. Menu is sourced from MySQL in connected environments.
 
   res.json({
     totalReservations: mockReservations.length,
