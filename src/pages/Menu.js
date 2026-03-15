@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { Search, Filter, ChefHat, Flame, Leaf } from 'lucide-react';
+import { Search, Filter, ChefHat, Flame, Leaf, ChevronDown, ChevronUp } from 'lucide-react';
 import api from '../api';
 
 function AnimatedSection({ children, className = '', delay = 0 }) {
@@ -30,7 +30,10 @@ export default function Menu() {
   const [menuItems, setMenuItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [search, setSearch] = useState('');
-  const [vegOnly, setVegOnly] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth >= 1024;
+  });
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState({});
 
@@ -46,7 +49,6 @@ export default function Menu() {
 
   const filteredItems = menuItems.filter(item => {
     if (activeCategory && item.category_id !== activeCategory) return false;
-    if (vegOnly && !item.is_vegetarian) return false;
     if (search && !item.name.toLowerCase().includes(search.toLowerCase()) && !item.description?.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -86,53 +88,60 @@ export default function Menu() {
       </section>
 
       {/* Filters */}
-      <section className="sticky top-20 z-30 bg-white/90 dark:bg-neutral-950/90 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800/50">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md w-full">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500" />
-              <input
-                type="text"
-                placeholder="Search dishes..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="input-dark !pl-10"
-              />
+      <section className="sticky top-20 z-40 bg-white/95 dark:bg-neutral-950/95 backdrop-blur-xl border-b border-neutral-200 dark:border-neutral-800/50">
+        <div className="max-w-7xl mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-neutral-600 dark:text-neutral-300">
+              <Filter size={16} className="text-amber-500" />
+              <span>Menu Filters</span>
             </div>
+            <button
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-all"
+              aria-expanded={isFiltersOpen}
+              aria-controls="menu-filters-panel"
+            >
+              <span>{isFiltersOpen ? 'Close' : 'Open'}</span>
+              {isFiltersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
 
-            <div className="flex items-center gap-3 flex-wrap">
-              {/* Veg filter */}
-              <button
-                onClick={() => setVegOnly(!vegOnly)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${vegOnly ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700'
-                  }`}
-              >
-                <Leaf size={16} /> Vegetarian
-              </button>
+          {isFiltersOpen && (
+            <div id="menu-filters-panel" className="mt-3 space-y-3">
+              <div className="relative w-full md:max-w-md">
+                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search dishes..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="input-dark !pl-10"
+                />
+              </div>
 
-              {/* Category pills - scrollable on mobile */}
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                <button
-                  onClick={() => setActiveCategory(null)}
-                  className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${!activeCategory ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
-                    }`}
-                >
-                  All
-                </button>
-                {categories.map(cat => (
+              <div className="overflow-x-auto pb-1">
+                <div className="flex gap-2 min-w-max">
                   <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
-                    className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeCategory === cat.id ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
+                    onClick={() => setActiveCategory(null)}
+                    className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${!activeCategory ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
                       }`}
                   >
-                    {cat.name}
+                    All
                   </button>
-                ))}
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
+                      className={`whitespace-nowrap px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${activeCategory === cat.id ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:text-neutral-900 dark:hover:text-white'
+                        }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
