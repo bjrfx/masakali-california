@@ -1656,8 +1656,8 @@ app.post('/api/reservations', async (req, res) => {
         `INSERT INTO reservations (
           restaurant_id,
           name,
-          normalizedEmail,
-          normalizedPhone,
+          email,
+          phone,
           date,
           time,
           persons,
@@ -1693,8 +1693,8 @@ app.post('/api/reservations', async (req, res) => {
         [
           restaurant_id,
           name,
-          email,
-          phone,
+          normalizedEmail,
+          normalizedPhone,
           date,
           time,
           persons,
@@ -1732,7 +1732,10 @@ app.post('/api/reservations', async (req, res) => {
       const [restaurants] = await db.query('SELECT * FROM restaurants WHERE id = ?', [restaurant_id]);
       sendReservationEmails(rows[0], restaurants[0] || null);
       return res.json(rows[0]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'Failed to create reservation.' });
+    }
   }
 
   const newReservation = {
