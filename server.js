@@ -745,17 +745,59 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function formatReservationDate(value) {
+  if (!value) return '';
+
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    const [year, month, day] = value.trim().split('-').map((part) => Number(part));
+    const dateOnly = new Date(year, month - 1, day);
+    if (!Number.isNaN(dateOnly.getTime())) {
+      return dateOnly.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+
+  return parsed.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 function reservationInfoBlockHtml(reservation, restaurantName, options = {}) {
   const includePrevious = Boolean(options.previousDetails);
   const includeUpdated = Boolean(options.updatedDetails);
+  const formattedDate = formatReservationDate(reservation.date);
+
+  const rows = [
+    ['Confirmation Code', reservation.confirmation_code],
+    ['Name', reservation.name],
+    ['Email', reservation.email || 'N/A'],
+    ['Date', formattedDate || reservation.date || 'N/A'],
+    ['Time', reservation.time || 'N/A'],
+    ['Phone', reservation.phone || 'N/A'],
+  ]
+    .map(
+      ([label, value]) =>
+        `<tr>
+          <td style="padding:8px 10px;border:1px solid #e5e7eb;background:#f9fafb;color:#111827;font-size:14px;font-weight:600;width:170px;">${escapeHtml(label)}</td>
+          <td style="padding:8px 10px;border:1px solid #e5e7eb;color:#111827;font-size:14px;">${escapeHtml(value)}</td>
+        </tr>`
+    )
+    .join('');
 
   return `
     <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin:18px 0;">
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Confirmation Code:</strong> ${escapeHtml(reservation.confirmation_code)}</p>
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Name:</strong> ${escapeHtml(reservation.name)}</p>
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Restaurant:</strong> ${escapeHtml(restaurantName)}</p>
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Date:</strong> ${escapeHtml(reservation.date)}</p>
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Time:</strong> ${escapeHtml(reservation.time)}</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${rows}</table>
+      <p style="margin:12px 0 10px 0;color:#111827;font-size:14px;"><strong>Restaurant:</strong> ${escapeHtml(restaurantName)}</p>
       <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Guests:</strong> ${escapeHtml(reservation.persons)}</p>
       ${reservation.special_requests ? `<p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Special Requests:</strong> ${escapeHtml(reservation.special_requests)}</p>` : ''}
       ${includePrevious ? `<p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Previous Details:</strong> ${escapeHtml(options.previousDetails)}</p>` : ''}
@@ -894,6 +936,7 @@ async function sendReservationEmails(reservation, restaurant) {
   }
 
   const restaurantName = restaurant?.name || 'Masakali California';
+  const formattedDate = formatReservationDate(reservation.date) || reservation.date;
 
   try {
     // Customer confirmation
@@ -913,9 +956,11 @@ async function sendReservationEmails(reservation, restaurant) {
 Reservation confirmed.
 Code: ${reservation.confirmation_code}
 Name: ${reservation.name}
+    Email: ${reservation.email || 'N/A'}
 Restaurant: ${restaurantName}
-Date: ${reservation.date}
+    Date: ${formattedDate}
 Time: ${reservation.time}
+    Phone: ${reservation.phone || 'N/A'}
 Guests: ${reservation.persons}
 ${reservation.special_requests ? `Special Requests: ${reservation.special_requests}\n` : ''}
 If you need to change, update, or edit your reservation, visit: ${MANAGE_RESERVATIONS_URL}`,
@@ -937,7 +982,7 @@ If you need to change, update, or edit your reservation, visit: ${MANAGE_RESERVA
             `Manage Reservations: ${MANAGE_RESERVATIONS_URL}`,
           ],
         }),
-        text: `New reservation:\nName: ${reservation.name}\nEmail: ${reservation.email}\nPhone: ${reservation.phone}\nBranch: ${restaurantName}\nDate: ${reservation.date}\nTime: ${reservation.time}\nGuests: ${reservation.persons}\nCode: ${reservation.confirmation_code}`,
+        text: `New reservation:\nConfirmation Code: ${reservation.confirmation_code}\nName: ${reservation.name}\nEmail: ${reservation.email || 'N/A'}\nDate: ${formattedDate}\nTime: ${reservation.time}\nPhone: ${reservation.phone || 'N/A'}\nBranch: ${restaurantName}\nGuests: ${reservation.persons}`,
       });
     } else {
       console.log('Admin reservation notification skipped (no admin recipient configured). Reservation:', reservation.confirmation_code);
@@ -956,8 +1001,8 @@ async function sendReservationUpdateEmails(previousReservation, updatedReservati
     return;
   }
 
-  const oldDetails = `Date: ${previousReservation.date}, Time: ${previousReservation.time}, Guests: ${previousReservation.persons}`;
-  const newDetails = `Date: ${updatedReservation.date}, Time: ${updatedReservation.time}, Guests: ${updatedReservation.persons}`;
+  const oldDetails = `Date: ${formatReservationDate(previousReservation.date) || previousReservation.date}, Time: ${previousReservation.time}, Guests: ${previousReservation.persons}`;
+  const newDetails = `Date: ${formatReservationDate(updatedReservation.date) || updatedReservation.date}, Time: ${updatedReservation.time}, Guests: ${updatedReservation.persons}`;
   const restaurantName = restaurant?.name || 'Masakali California';
 
   try {
