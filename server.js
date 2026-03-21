@@ -937,6 +937,7 @@ async function sendReservationEmails(reservation, restaurant) {
 
   const restaurantName = restaurant?.name || 'Masakali California';
   const formattedDate = formatReservationDate(reservation.date) || reservation.date;
+  const adminReservationLabel = `New Reservation - ${restaurantName}`;
 
   try {
     // Customer confirmation
@@ -971,9 +972,9 @@ If you need to change, update, or edit your reservation, visit: ${MANAGE_RESERVA
         from: `"Masakali Reservations" <${reservationEmailUser}>`,
         to: adminRecipients.join(', '),
         replyTo: reservation.email || reservationEmailUser,
-        subject: 'New Reservation Alert',
+        subject: adminReservationLabel,
         html: buildReservationAdminEmailHtml({
-          title: 'New Reservation Alert',
+          title: adminReservationLabel,
           reservation,
           restaurantName,
           details: [
