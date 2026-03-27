@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, Heart, Globe, Award, Users, Utensils, TrendingUp, Play } from 'lucide-react';
+import { ArrowRight, Play } from 'lucide-react';
 import introVideo from '../assets/video/masakali-intro.mp4';
 
 function AnimatedSection({ children, className = '', delay = 0 }) {
@@ -21,13 +21,6 @@ const timeline = [
   { year: '2024', title: 'Montreal Expansion', desc: 'Masakali arrives in Montreal, bringing our signature flavors to Quebec.' },
   { year: '2025', title: 'Going International', desc: 'Masakali launches in Cupertino, California, USA — our first international location in the heart of Silicon Valley.' },
   { year: '2026', title: 'Digital Future', desc: 'Launch of unified digital platform for all locations. Building the future of Masakali Restaurant Group.' },
-];
-
-const values = [
-  { icon: Heart, title: 'Passion', desc: 'Every dish is crafted with love and dedication to authentic Indian culinary traditions.' },
-  { icon: Award, title: 'Quality', desc: 'We never compromise on ingredients. Fresh, premium, and sourced with care.' },
-  { icon: Users, title: 'Community', desc: 'We believe food brings people together. Our restaurants are gathering places for all.' },
-  { icon: Globe, title: 'Vision', desc: 'From Ottawa to the world — spreading the joy of Indian cuisine globally.' },
 ];
 
 function VideoPlayer({ src }) {
@@ -109,40 +102,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* Mission */}
-      <section className="py-24 bg-neutral-50 dark:bg-neutral-950 bg-indian-lotus relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <AnimatedSection>
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 relative overflow-hidden shadow-sm dark:shadow-none">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-amber-600" />
-                <Utensils size={40} className="text-amber-500 dark:text-amber-400 mb-6" />
-                <h2 className="font-display text-3xl font-bold text-neutral-900 dark:text-white mb-4">Our Mission</h2>
-                <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                  To bring the authentic, diverse, and rich flavors of Indian cuisine to communities 
-                  worldwide. We believe that food is a universal language, and through our restaurants, 
-                  we aim to create memorable dining experiences that honor India's culinary heritage 
-                  while embracing modern innovation.
-                </p>
-              </div>
-            </AnimatedSection>
-
-            <AnimatedSection delay={0.2}>
-              <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-10 relative overflow-hidden shadow-sm dark:shadow-none">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-600 to-amber-500" />
-                <TrendingUp size={40} className="text-amber-500 dark:text-amber-400 mb-6" />
-                <h2 className="font-display text-3xl font-bold text-neutral-900 dark:text-white mb-4">Our Vision</h2>
-                <p className="text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                  To become a globally recognized Indian restaurant group, known for exceptional 
-                  quality, innovative dining concepts, and community impact. We envision Masakali 
-                  locations on every continent, each maintaining the authentic spirit that started 
-                  in Ottawa while adapting to local cultures.
-                </p>
-              </div>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
 
       {/* Video Showcase */}
       <section className="py-28 bg-neutral-50 dark:bg-neutral-950 relative overflow-hidden">
@@ -227,38 +186,6 @@ export default function About() {
             50% { background-position: 100% 50%; }
           }
         `}</style>
-      </section>
-
-      {/* Values */}
-      <section className="py-24 bg-pattern bg-section-indian relative overflow-hidden bg-indian-border-bottom">
-        <div className="indian-vine-left" />
-        <div className="indian-vine-right" />
-        <div className="max-w-7xl mx-auto px-4">
-          <AnimatedSection className="text-center mb-16">
-            <span className="text-amber-500 dark:text-amber-400 text-sm font-semibold uppercase tracking-wider">What Drives Us</span>
-            <div className="section-divider" />
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-neutral-900 dark:text-white mt-4">
-              Our <span className="text-gold-gradient">Values</span>
-            </h2>
-          </AnimatedSection>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((val, i) => {
-              const Icon = val.icon;
-              return (
-                <AnimatedSection key={val.title} delay={i * 0.1}>
-                  <div className="bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 text-center card-hover gold-glow-hover shadow-sm dark:shadow-none">
-                    <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                      <Icon size={24} className="text-amber-500 dark:text-amber-400" />
-                    </div>
-                    <h3 className="text-neutral-900 dark:text-white font-semibold text-lg mb-3">{val.title}</h3>
-                    <p className="text-neutral-500 text-sm leading-relaxed">{val.desc}</p>
-                  </div>
-                </AnimatedSection>
-              );
-            })}
-          </div>
-        </div>
       </section>
 
       {/* Timeline */}
