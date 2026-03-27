@@ -13,7 +13,7 @@ const quickBotConfig = {
       menuBranch: null,
       restaurantId: 1,
       aliases: ['cupertino', 'california', 'de anza'],
-      fallbackPhone: '+14085550000',
+      fallbackPhone: '+10000000000',
     },
     {
       id: 'stittsville',
