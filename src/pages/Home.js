@@ -263,13 +263,13 @@ export default function Home() {
             {[...Array(8)].map((_, setIdx) => (
               <React.Fragment key={setIdx}>
                 <div className="flex-shrink-0 mx-10 md:mx-16 flex items-center justify-center" style={{ minWidth: '200px' }}>
-                  <img src="/logo/Masakali-Indian-Cuisine.png" alt="Masakali Indian Cuisine" className="h-20 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
+                  <img src="/logo/Masakali-Indian-Cuisine.png" alt="Masakali Indian Cuisine" className="h-24 md:h-28 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
                 </div>
                 <div className="flex-shrink-0 mx-10 md:mx-16 flex items-center justify-center" style={{ minWidth: '200px' }}>
-                  <img src="/logo/Masakali-RestoBar.png" alt="Masakali Restobar" className="h-16 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
+                  <img src="/logo/Masakali-RestoBar.png" alt="Masakali Restobar" className="h-20 md:h-24 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
                 </div>
                 <div className="flex-shrink-0 mx-10 md:mx-16 flex items-center justify-center" style={{ minWidth: '200px' }}>
-                  <img src="/logo/RangDe-Indian-Cuisine.png" alt="RangDe Indian Cuisine" className="h-20 md:h-20 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
+                  <img src="/logo/RangDe-Indian-Cuisine.png" alt="RangDe Indian Cuisine" className="h-36 md:h-34 object-contain opacity-70 hover:opacity-100 transition-opacity duration-300" />
                 </div>
               </React.Fragment>
             ))}
