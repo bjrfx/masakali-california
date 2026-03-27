@@ -18,20 +18,20 @@ const packages = [
   {
     name: 'Silver',
     guests: 'Ideal for small events',
-    price: 'California: Starting at $15/person · Ottawa: Starting at $20/person',
+    price: 'Starting at $15/person',
     features: ['2 curries', '2 appetizers', 'Rice', 'Naan', 'Dessert'],
   },
   {
     name: 'Gold',
     guests: 'Ideal for medium events',
-    price: 'California: $20/person · Ottawa: $25/person',
+    price: 'Starting at $20/person',
     features: ['3 curries', '3 appetizers', 'Rice', 'Naan', 'Dessert'],
     featured: true,
   },
   {
     name: 'Platinum',
     guests: 'Ideal for large events',
-    price: 'California: $25/person · Ottawa: $30/person',
+    price: 'Starting at $25/person',
     features: ['4 curries', '4 appetizers', 'Rice', 'Naan', 'Dessert'],
   },
 ];
