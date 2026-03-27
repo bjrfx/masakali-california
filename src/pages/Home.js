@@ -30,42 +30,48 @@ const stats = [
   { icon: Sparkles, value: '2026', label: 'Now Open' },
 ];
 
-const groupedLocations = {
-  USA: [
-    {
-      city: 'Cupertino, California',
-      brand: 'Masakali Indian Cuisine',
-      address: '10310 S De Anza Blvd, Cupertino, CA 95014',
-    },
-  ],
-  Canada: [
-    {
-      city: 'Ottawa (Wellington)',
-      brand: 'Masakali Indian Cuisine',
-      address: '1111 Wellington St W, Ottawa, ON',
-    },
-    {
-      city: 'Stittsville',
-      brand: 'Masakali Indian Cuisine',
-      address: '5507 Hazeldean Rd Unit C3-1, Stittsville, ON',
-    },
-    {
-      city: 'Ottawa (ByWard Market)',
-      brand: 'Masakali Restobar',
-      address: '97 Clarence St, Ottawa, ON',
-    },
-    {
-      city: 'Kanata',
-      brand: 'RangDe Indian Cuisine',
-      address: '700 March Rd Unit H, Kanata, ON',
-    },
-    {
-      city: 'Montreal',
-      brand: 'Masakali Indian Cuisine',
-      address: '1015 Sherbrooke St W, Montreal, QC',
-    },
-  ],
-};
+const locationSections = [
+  {
+    country: 'Canada',
+    locations: [
+      {
+        name: 'Masakali Indian Cuisine',
+        subtitle: 'Masakali Indian Cuisine - Stittsville',
+        address: '5507 Hazeldean Rd Unit C3-1, Stittsville, Ontario, Canada',
+      },
+      {
+        name: 'Masakali Indian Cuisine',
+        subtitle: 'Masakali Indian Cuisine - Wellington',
+        address: '1111 Wellington St. W, Ottawa, ON K1Y 1P1, Ottawa, Ontario, Canada',
+      },
+      {
+        name: 'Masakali Indian Resto Bar',
+        subtitle: 'Masakali Indian Resto Bar - Byward Market',
+        address: '97 Clarence St., Ottawa, ON K1N 5P9, Ottawa, Ontario, Canada',
+      },
+      {
+        name: 'RangDe Indian Cuisine',
+        subtitle: 'RangDe Indian Cuisine - Kanata',
+        address: '700 March Rd Unit H, Kanata, ON K2K 2V9, Kanata, Ontario, Canada',
+      },
+      {
+        name: 'Masakali Indian Cuisine',
+        subtitle: 'Masakali Indian Cuisine - Montreal',
+        address: '1015 Sherbrooke St W, Montreal, Quebec H3A 1G5, Montreal, Quebec, Canada',
+      },
+    ],
+  },
+  {
+    country: 'USA',
+    locations: [
+      {
+        name: 'Masakali Indian Cuisine',
+        subtitle: 'Masakali Indian Cuisine - California',
+        address: '10310 S De Anza Blvd, Cupertino, CA 95014, United States, California, USA',
+      },
+    ],
+  },
+];
 
 function AnimatedSection({ children, className = '', delay = 0 }) {
   const ref = useRef(null);
@@ -295,34 +301,38 @@ export default function Home() {
         <div className="indian-vine-right" />
         <div className="max-w-7xl mx-auto px-4">
           <AnimatedSection className="text-center mb-16">
-            <span className="text-amber-500 dark:text-amber-400 text-sm font-semibold uppercase tracking-wider">Find Us</span>
-            <div className="section-divider" />
             <h2 className="font-display text-4xl md:text-5xl font-bold text-neutral-900 dark:text-white mt-4">
               Our <span className="text-gold-gradient">Locations</span>
             </h2>
           </AnimatedSection>
 
-          <div className="grid lg:grid-cols-2 gap-8">
-            {Object.entries(groupedLocations).map(([country, locations], countryIndex) => (
-              <AnimatedSection key={country} delay={countryIndex * 0.1}>
-                <div className="bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm dark:shadow-none h-full">
-                  <h3 className="font-display text-2xl font-bold text-neutral-900 dark:text-white mb-6">{country}</h3>
-                  <div className="space-y-4">
-                    {locations.map((loc, i) => (
-                      <div key={`${country}-${i}`} className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 bg-neutral-50/80 dark:bg-neutral-950/50">
+          <div className="space-y-12">
+            {locationSections.map((section, sectionIndex) => (
+              <div key={section.country}>
+                <AnimatedSection delay={sectionIndex * 0.1} className="flex items-center gap-4 mb-5">
+                  <h3 className="font-display text-3xl font-bold text-neutral-900 dark:text-white">{section.country}</h3>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                    {section.locations.length} {section.locations.length === 1 ? 'Location' : 'Locations'}
+                  </span>
+                </AnimatedSection>
+
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {section.locations.map((loc, i) => (
+                    <AnimatedSection key={`${section.country}-${i}`} delay={Math.min(i * 0.05, 0.2)}>
+                      <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-900/70 p-6 shadow-sm dark:shadow-none min-h-[165px]">
                         <div className="flex items-start gap-3">
-                          <MapPin size={18} className="text-amber-500 dark:text-amber-400 mt-0.5" />
+                          <MapPin size={20} className="text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                           <div>
-                            <p className="text-neutral-900 dark:text-white font-semibold text-sm">{loc.city}</p>
-                            <p className="text-amber-600 dark:text-amber-400 text-sm">{loc.brand}</p>
-                            <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">{loc.address}</p>
+                            <p className="text-neutral-900 dark:text-white font-semibold text-3 leading-tight">{loc.name}</p>
+                            <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">{loc.subtitle}</p>
+                            <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-3 leading-relaxed">{loc.address}</p>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </AnimatedSection>
+                  ))}
                 </div>
-              </AnimatedSection>
+              </div>
             ))}
           </div>
 
