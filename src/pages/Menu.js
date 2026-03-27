@@ -30,11 +30,8 @@ export default function Menu() {
   const [menuItems, setMenuItems] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState('card');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return window.innerWidth >= 1024;
-  });
+  const [viewMode, setViewMode] = useState('compact');
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [brokenImages, setBrokenImages] = useState({});
 
@@ -78,7 +75,7 @@ export default function Menu() {
             <span className="text-amber-500 dark:text-amber-400 text-sm font-semibold uppercase tracking-wider">Our Menu</span>
             <div className="section-divider !mx-0" />
             <h1 className="font-display text-5xl md:text-6xl font-bold text-neutral-900 dark:text-white mt-4 mb-4">
-              Explore Our <span className="text-gold-gradient">Flavors</span>
+              <span className="text-gold-gradient">Menu</span>
             </h1>
             <p className="text-neutral-600 dark:text-neutral-400 text-lg max-w-2xl">
               Discover our carefully curated menu featuring authentic Indian dishes,
@@ -121,6 +118,17 @@ export default function Menu() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('compact')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm border transition-all ${viewMode === 'compact'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700'
+                    }`}
+                  aria-pressed={viewMode === 'compact'}
+                >
+                  <LayoutGrid size={15} /> Compact
+                </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('card')}
@@ -205,7 +213,35 @@ export default function Menu() {
                   </div>
                 </AnimatedSection>
 
-                {viewMode === 'card' ? (
+                {viewMode === 'compact' ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    {category.items.map((item, i) => {
+                      const spice = spiceColors[item.spice_level] || spiceColors.medium;
+                      return (
+                        <AnimatedSection key={item.id} delay={Math.min(i * 0.03, 0.2)}>
+                          <div className="bg-white/80 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 h-full shadow-sm dark:shadow-none">
+                            <h3 className="text-neutral-900 dark:text-white font-semibold text-sm leading-tight mb-2 line-clamp-2">
+                              {item.name}
+                            </h3>
+                            <p className="text-neutral-500 text-xs mb-3 line-clamp-2 min-h-[2rem]">
+                              {item.description || 'No description available.'}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {item.is_vegetarian && (
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">
+                                  <Leaf size={10} /> Veg
+                                </span>
+                              )}
+                              <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 ${spice.bg} ${spice.text} rounded-full`}>
+                                <Flame size={10} /> {spice.label}
+                              </span>
+                            </div>
+                          </div>
+                        </AnimatedSection>
+                      );
+                    })}
+                  </div>
+                ) : viewMode === 'card' ? (
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {category.items.map((item, i) => {
                       const spice = spiceColors[item.spice_level] || spiceColors.medium;
