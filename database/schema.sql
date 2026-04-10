@@ -218,7 +218,7 @@ INSERT INTO restaurants (name, slug, brand, address, city, province_state, count
 ('Masakali Indian Resto Bar - Byward Market', 'restobar', 'Masakali Indian Resto Bar', '97 Clarence St., Ottawa, ON K1N 5P9', 'Ottawa', 'Ontario', 'Canada', '6137896777', 'info@masakalirestrobar.ca', 'https://masakalirestrobar.ca'),
 ('RangDe Indian Cuisine - Kanata', 'rangde', 'RangDe Indian Cuisine', '700 March Rd Unit H, Kanata, ON K2K 2V9', 'Kanata', 'Ontario', 'Canada', '6135950777', 'info@rangdeottawa.com', 'https://rangdeottawa.com'),
 ('Masakali Indian Cuisine - Montreal', 'montreal', 'Masakali Indian Cuisine', '1015 Sherbrooke St W, Montreal, Quebec H3A 1G5', 'Montreal', 'Quebec', 'Canada', '5142286777', 'montreal@masakali.ca', 'https://masakalimontreal.ca'),
-('Masakali Indian Cuisine - California', 'california', 'Masakali Indian Cuisine', '10310 S De Anza Blvd, Cupertino, CA 95014, United States', 'Cupertino', 'California', 'USA', '0000000000', 'admin@masakalicalifornia.com', 'https://masakalicalifornia.com');
+('Masakali Indian Cuisine - California', 'california', 'Masakali Indian Cuisine', '10310 S De Anza Blvd, Cupertino, CA 95014, United States', 'Cupertino', 'California', 'USA', '(408) 352-5097', 'admin@masakalicalifornia.com', 'https://masakalicalifornia.com');
 
 -- =====================================================
 -- Seed Data: Default Admin

@@ -105,8 +105,11 @@ export default function Footer() {
             <div className="mt-8">
               <h3 className="text-amber-600 dark:text-amber-400 font-semibold text-sm uppercase tracking-wider mb-4">Contact</h3>
               <div className="space-y-2">
-                <a href="mailto:contact@masakalicalifornia.com" className="text-neutral-500 dark:text-neutral-400 text-sm hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-2">
-                  <Mail size={14} /> contact@masakalicalifornia.com
+                <a href="tel:+14083525097" className="text-neutral-500 dark:text-neutral-400 text-sm hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-2">
+                  <Phone size={14} /> (408) 352-5097
+                </a>
+                <a href="mailto:masakalicalifornia@gmail.com" className="text-neutral-500 dark:text-neutral-400 text-sm hover:text-neutral-900 dark:hover:text-white transition-colors flex items-center gap-2">
+                  <Mail size={14} /> masakalicalifornia@gmail.com
                 </a>
               </div>
             </div>

@@ -11,9 +11,9 @@ const quickBotConfig = {
       name: 'Cupertino, California',
       slug: 'california',
       menuBranch: null,
-      restaurantId: 1,
+      restaurantId: null,
       aliases: ['cupertino', 'california', 'de anza'],
-      fallbackPhone: '+10000000000',
+      fallbackPhone: '(408) 352-5097',
     },
     {
       id: 'stittsville',
