@@ -4,6 +4,37 @@ import { motion, useInView } from 'framer-motion';
 import { MapPin, Phone, Mail, Globe, Clock, ExternalLink, Navigation } from 'lucide-react';
 import api from '../api';
 
+const CALIFORNIA_PHONE = '(408) 352-5097';
+
+function formatPhoneDisplay(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return String(value || '').trim();
+}
+
+function resolveDisplayPhone(restaurant) {
+  const slug = String(restaurant?.slug || '').toLowerCase();
+  const raw = String(restaurant?.phone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+
+  // Always show the verified California number in consistent format.
+  if (slug === 'california') {
+    return CALIFORNIA_PHONE;
+  }
+
+  if (!raw || digits === '0000000000' || digits === '10000000000') return '';
+  return formatPhoneDisplay(raw);
+}
+
+function resolveTelLink(phone) {
+  return `+${String(phone || '').replace(/\D/g, '')}`;
+}
+
 function AnimatedSection({ children, className = '', delay = 0 }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-30px' });
@@ -42,6 +73,7 @@ const locationDetails = {
 function LocationCard({ restaurant, delay = 0 }) {
   const details = locationDetails[restaurant.slug] || {};
   const gradient = locationImages[restaurant.slug] || 'from-amber-900/20 to-neutral-900';
+  const displayPhone = resolveDisplayPhone(restaurant);
 
   return (
     <AnimatedSection delay={delay}>
@@ -67,11 +99,11 @@ function LocationCard({ restaurant, delay = 0 }) {
               </span>
             </div>
 
-            {restaurant.phone && (
+            {displayPhone && (
               <div className="flex items-center gap-3">
                 <Phone size={16} className="text-neutral-400 dark:text-neutral-500 flex-shrink-0" />
-                <a href={`tel:${restaurant.phone}`} className="text-neutral-500 dark:text-neutral-400 text-sm hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
-                  {restaurant.phone}
+                <a href={`tel:${resolveTelLink(displayPhone)}`} className="text-neutral-500 dark:text-neutral-400 text-sm hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
+                  {displayPhone}
                 </a>
               </div>
             )}

@@ -294,7 +294,7 @@ export default function Reservations() {
             {[
               { icon: CalendarDays, title: 'Instant Confirmation', desc: 'Your reservation is confirmed immediately.' },
               { icon: Mail, title: 'Email Notification', desc: 'Receive confirmation and reminder emails.' },
-              { icon: Phone, title: 'Need Help?', desc: 'Email contact@masakalicalifornia.com for assistance.' },
+              { icon: Phone, title: 'Need Help?', desc: 'Email masakalicalifornia@gmail.com for assistance.' },
             ].map((item, i) => {
               const Icon = item.icon;
               return (

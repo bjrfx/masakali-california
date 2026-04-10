@@ -37,8 +37,8 @@ export default function Contact() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               { icon: MapPin, title: 'Our Location', lines: ['10310 S De Anza Blvd', 'Cupertino, CA 95014, USA'] },
-              { icon: Phone, title: 'Phone', lines: ['Now Open', 'Contact us via email'] },
-              { icon: Mail, title: 'Email', lines: ['contact@masakalicalifornia.com'] },
+              { icon: Phone, title: 'Phone', lines: ['(408) 352-5097'] },
+              { icon: Mail, title: 'Email', lines: ['masakalicalifornia@gmail.com'] },
               { icon: Clock, title: 'Hours', lines: ['Daily', 'Please call for current timings'] },
             ].map((item, i) => {
               const Icon = item.icon;

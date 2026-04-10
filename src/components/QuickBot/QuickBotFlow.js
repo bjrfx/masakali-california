@@ -26,6 +26,17 @@ function buildTelNumber(rawPhone, countryCode) {
   return `+${digits}`;
 }
 
+function formatPhoneDisplay(rawPhone) {
+  const digits = normalizePhoneDigits(rawPhone);
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return normalizeString(rawPhone);
+}
+
 function normalizeMenuText(value) {
   return normalizeString(value).toLowerCase().replace(/\s+/g, ' ');
 }
@@ -125,11 +136,12 @@ function normalizeMenuItem(item) {
 
 function normalizeRestaurant(item, config) {
   const locationMatch = toSafeArray(config.locations).find((location) => locationMatchesRestaurant(location, item));
+  const sourcePhone = item.phone || locationMatch?.fallbackPhone || '';
   return {
     id: item.id,
     name: item.name || locationMatch?.name || 'Restaurant',
     address: [item.address, item.city, item.province_state].filter(Boolean).join(', '),
-    phone: item.phone || locationMatch?.fallbackPhone || '',
+    phone: formatPhoneDisplay(sourcePhone),
     opening_hours: item.opening_hours || item.hours || 'Call for latest hours',
     slug: item.slug || locationMatch?.slug || '',
     menuBranch: locationMatch?.menuBranch || null,
@@ -315,11 +327,12 @@ export function getActions({ hasReservations }) {
 export function getLocationOptions(config, restaurants) {
   return toSafeArray(config.locations).map((location) => {
     const restaurant = resolveRestaurantForLocation(location, restaurants);
+    const sourcePhone = restaurant?.phone || location.fallbackPhone || '';
     return {
       ...location,
       restaurantName: restaurant?.name || fallbackRestaurantName(location),
-      phone: restaurant?.phone || location.fallbackPhone || '',
-      tel: buildTelNumber(restaurant?.phone || location.fallbackPhone, config.defaultCallCountryCode || '+1'),
+      phone: formatPhoneDisplay(sourcePhone),
+      tel: buildTelNumber(sourcePhone, config.defaultCallCountryCode || '+1'),
     };
   });
 }

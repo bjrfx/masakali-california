@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
-import { ArrowRight, MapPin, Users, CalendarDays, ChefHat, Sparkles, Clock, PartyPopper } from 'lucide-react';
+import { ArrowRight, MapPin, Phone, Users, CalendarDays, ChefHat, Sparkles, Clock, PartyPopper } from 'lucide-react';
 
 import imgMonterial1 from '../assets/restaurant-images/monterial1.webp';
 import imgMonterial2 from '../assets/restaurant-images/monterial2.webp';
@@ -70,6 +70,7 @@ const locationSections = [
         name: 'Masakali Indian Cuisine',
         subtitle: 'Masakali Indian Cuisine - California',
         address: '10310 S De Anza Blvd, Cupertino, CA 95014, United States, California, USA',
+        phone: '(408) 352-5097',
       },
     ],
   },
@@ -158,7 +159,7 @@ export default function Home() {
           >
             <div className="mb-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full grand-opening-badge text-sm">
               <PartyPopper size={16} />
-              <span>Now Open on April 9th · Cupertino, California</span>
+              <span>Now Open · Cupertino, California</span>
               <Sparkles size={14} className="animate-sparkle" />
             </div>
           </motion.div>
@@ -174,14 +175,27 @@ export default function Home() {
             <span className="text-gold-gradient">Indian Cuisine</span>
           </motion.h1>
 
-          <motion.p
+          {/* <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
             className="text-neutral-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Now Open on April 9th in{' '}
+            Now Open in{' '}
             <span className="text-amber-400 font-semibold">Cupertino, California</span>.
+          </motion.p> */}
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="text-neutral-300 text-base md:text-lg mb-8 flex items-center justify-center gap-2"
+          >
+            <Phone size={16} className="text-amber-400" />
+            <span>Call us for reservations:</span>
+            <a href="tel:+14083525097" className="text-amber-400 font-semibold hover:text-amber-300 transition-colors">
+              (408) 352-5097
+            </a>
           </motion.p>
 
           <motion.div
@@ -264,7 +278,7 @@ export default function Home() {
           <AnimatedSection className="text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 mb-6">
               <Sparkles size={16} className="text-amber-500" />
-              <span className="text-amber-600 dark:text-amber-400 text-sm font-semibold">Now Open on April 9th</span>
+              <span className="text-amber-600 dark:text-amber-400 text-sm font-semibold">Now Open</span>
             </div>
             <h2 className="font-display text-4xl md:text-5xl font-bold text-neutral-900 dark:text-white mb-4">
               Cupertino, California
@@ -356,6 +370,12 @@ export default function Home() {
                             <p className="text-neutral-900 dark:text-white font-semibold text-3 leading-tight">{loc.name}</p>
                             <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-1">{loc.subtitle}</p>
                             <p className="text-neutral-500 dark:text-neutral-400 text-sm mt-3 leading-relaxed">{loc.address}</p>
+                            {loc.phone && (
+                              <a href={`tel:${loc.phone}`} className="inline-flex items-center gap-2 text-neutral-500 dark:text-neutral-400 text-sm mt-3 hover:text-amber-500 dark:hover:text-amber-400 transition-colors">
+                                <Phone size={14} />
+                                <span>{loc.phone}</span>
+                              </a>
+                            )}
                           </div>
                         </div>
                       </div>
