@@ -232,9 +232,9 @@ export default function Menu() {
                                   <Leaf size={10} /> Veg
                                 </span>
                               )}
-                              <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 ${spice.bg} ${spice.text} rounded-full`}>
+                              {/* <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 ${spice.bg} ${spice.text} rounded-full`}>
                                 <Flame size={10} /> {spice.label}
-                              </span>
+                              </span> */}
                             </div>
                           </div>
                         </AnimatedSection>
