@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { CalendarDays, Clock, Users, MapPin, Check, Loader2, ArrowRight, Phone, Mail, MessageSquare } from 'lucide-react';
 import api from '../api';
+import { gtagEvent, trackGoogleAdsConversion } from '../utils/gtag';
 
 function AnimatedSection({ children, className = '', delay = 0 }) {
   const ref = useRef(null);
@@ -89,6 +90,20 @@ export default function Reservations() {
       };
 
       const result = await api.createReservation(payload);
+
+      gtagEvent('reservation_submit_success', {
+        event_category: 'engagement',
+        event_label: 'reservation_form',
+        value: Number(form.persons) || 1,
+      });
+
+      trackGoogleAdsConversion({
+        conversionLabel: process.env.REACT_APP_GOOGLE_ADS_CONVERSION_LABEL,
+        value: 1,
+        currency: 'USD',
+        transactionId: result?.confirmation_code,
+      });
+
       setConfirmation(result);
       setSubmitted(true);
     } catch (err) {
