@@ -204,6 +204,14 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
+            <a
+              href="https://www.clover.com/online-ordering/masakali-indian-cuisinec-cupertino"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-gold text-lg !px-10 !py-4"
+            >
+              Order Online <ArrowRight size={18} className="ml-2" />
+            </a>
             <Link to="/reservations" className="btn-gold text-lg !px-10 !py-4">
               Reserve a Table <ArrowRight size={18} className="ml-2" />
             </Link>
@@ -211,6 +219,15 @@ export default function Home() {
               Explore Menu
             </Link>
           </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.68 }}
+            className="text-neutral-400 text-sm md:text-base mt-3"
+          >
+            Order online and pick up in store.
+          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
