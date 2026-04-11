@@ -226,7 +226,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.68 }}
             className="text-neutral-400 text-sm md:text-base mt-3"
           >
-            Order online and pick up in store.
+            Order online for pickup.
           </motion.p>
 
           <motion.div
