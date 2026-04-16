@@ -18,21 +18,21 @@ const packages = [
   {
     name: 'Silver',
     guests: 'Ideal for small events',
-    price: 'Starting at $15/person',
-    features: ['2 curries', '2 appetizers', 'Rice', 'Naan', 'Dessert'],
+    price: 'Starting at $18/person',
+    features: ['2 curries (Veg/Paneer)', '2 appetizers (2Veg)', 'Steamed Rice', 'Butter Naan', 'Dessert (Gulab Jamun)'],
   },
   {
     name: 'Gold',
     guests: 'Ideal for medium events',
-    price: 'Starting at $20/person',
-    features: ['3 curries', '3 appetizers', 'Rice', 'Naan', 'Dessert'],
+    price: 'Starting at $23/person',
+    features: ['3 curries (2Veg/Paneer)', '3 appetizers (3Veg)', 'Steamed Rice', 'Butter Naan', 'Dessert (Gulab Jamun)'],
     featured: true,
   },
   {
     name: 'Platinum',
     guests: 'Ideal for large events',
-    price: 'Starting at $25/person',
-    features: ['4 curries', '4 appetizers', 'Rice', 'Naan', 'Dessert'],
+    price: 'Starting at $28/person',
+    features: ['4 curries (2Veg/2Paneer)', '4 appetizers (3Veg/Paneer)', 'Steamed Rice', 'Butter Naan', 'Dessert (Gulab Jamun)'],
   },
 ];
 
