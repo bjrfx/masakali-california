@@ -778,12 +778,13 @@ function reservationInfoBlockHtml(reservation, restaurantName, options = {}) {
   const formattedDate = formatReservationDate(reservation.date);
 
   const rows = [
-    ['Confirmation Code', reservation.confirmation_code],
     ['Name', reservation.name],
     ['Email', reservation.email || 'N/A'],
     ['Date', formattedDate || reservation.date || 'N/A'],
-    ['Time', reservation.time || 'N/A'],
-    ['Phone', reservation.phone || 'N/A'],
+    ['Time', reservation.time ? reservation.time.replace(/:00$/, '') : 'N/A'],
+    ['Phone', reservation.phone ? reservation.phone.replace(/^1/, '') : 'N/A'],
+    ['Guests', reservation.persons],
+    ['Restaurant', restaurantName],
   ]
     .map(
       ([label, value]) =>
@@ -797,8 +798,6 @@ function reservationInfoBlockHtml(reservation, restaurantName, options = {}) {
   return `
     <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px;margin:18px 0;">
       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">${rows}</table>
-      <p style="margin:12px 0 10px 0;color:#111827;font-size:14px;"><strong>Restaurant:</strong> ${escapeHtml(restaurantName)}</p>
-      <p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Guests:</strong> ${escapeHtml(reservation.persons)}</p>
       ${reservation.special_requests ? `<p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Special Requests:</strong> ${escapeHtml(reservation.special_requests)}</p>` : ''}
       ${includePrevious ? `<p style="margin:0 0 10px 0;color:#111827;font-size:14px;"><strong>Previous Details:</strong> ${escapeHtml(options.previousDetails)}</p>` : ''}
       ${includeUpdated ? `<p style="margin:0;color:#111827;font-size:14px;"><strong>Updated Details:</strong> ${escapeHtml(options.updatedDetails)}</p>` : ''}
@@ -853,13 +852,13 @@ function buildReservationAdminEmailHtml({ title, reservation, restaurantName, de
   return `
     <div style="background:#f3f4f6;padding:20px 12px;font-family:Verdana, Geneva, Tahoma, sans-serif;">
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
-        <img src="${escapeHtml(EMAIL_LOGO_URL)}" alt="Masakali Indian Cuisine" style="display:block;width:150px;max-width:100%;height:auto;" />
-        <h2 style="margin:14px 0 12px 0;color:#111827;font-size:20px;">${escapeHtml(title)}</h2>
         ${reservationInfoBlockHtml(reservation, restaurantName)}
+        ${details.length > 0 ? `
         <p style="margin:0 0 8px 0;color:#111827;font-size:14px;"><strong>Quick Summary:</strong></p>
         <ul style="margin:0;padding-left:20px;color:#111827;font-size:14px;line-height:1.5;">
           ${detailLines}
         </ul>
+        ` : ''}
         ${brandFooterHtml()}
       </div>
     </div>
@@ -937,7 +936,7 @@ async function sendReservationEmails(reservation, restaurant) {
 
   const restaurantName = restaurant?.name || 'Masakali California';
   const formattedDate = formatReservationDate(reservation.date) || reservation.date;
-  const adminReservationLabel = `New Reservation - ${restaurantName}`;
+  const adminReservationLabel = `New Reservation - Masakali Indian Cuisine - ${restaurantName.replace(/^Masakali\s+/, '')}`;
 
   try {
     // Customer confirmation
@@ -977,11 +976,7 @@ If you need to change, update, or edit your reservation, visit: ${MANAGE_RESERVA
           title: adminReservationLabel,
           reservation,
           restaurantName,
-          details: [
-            `Guest Email: ${reservation.email || 'N/A'}`,
-            `Guest Phone: ${reservation.phone || 'N/A'}`,
-            `Manage Reservations: ${MANAGE_RESERVATIONS_URL}`,
-          ],
+          details: [],
         }),
         text: `New reservation:\nConfirmation Code: ${reservation.confirmation_code}\nName: ${reservation.name}\nEmail: ${reservation.email || 'N/A'}\nDate: ${formattedDate}\nTime: ${reservation.time}\nPhone: ${reservation.phone || 'N/A'}\nBranch: ${restaurantName}\nGuests: ${reservation.persons}`,
       });
