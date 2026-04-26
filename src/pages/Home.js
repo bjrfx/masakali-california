@@ -210,7 +210,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="btn-gold text-lg !px-10 !py-4"
             >
-              Order Online <ArrowRight size={18} className="ml-2" />
+              Order online for pickup.
             </a>
             <Link to="/reservations" className="btn-gold text-lg !px-10 !py-4">
               Reserve a Table <ArrowRight size={18} className="ml-2" />
@@ -219,15 +219,6 @@ export default function Home() {
               Explore Menu
             </Link>
           </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.68 }}
-            className="text-neutral-400 text-sm md:text-base mt-3"
-          >
-            Order online for pickup.
-          </motion.p>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
