@@ -19,7 +19,7 @@ const timeline = [
   { year: '2022', title: 'Growing Roots', desc: 'Expanding to Wellington Street, Ottawa. Launch of RangDe Indian Cuisine at 700 March Rd.' },
   { year: '2023', title: 'Restobar Launch', desc: 'Masakali Restobar opens in the vibrant Byward Market, offering a modern fusion dining experience.' },
   { year: '2024', title: 'Montreal Expansion', desc: 'Masakali arrives in Montreal, bringing our signature flavors to Quebec.' },
-  { year: '2025', title: 'Going International', desc: 'Masakali launches in Cupertino, California, USA — our first international location in the heart of Silicon Valley.' },
+  { year: '2026', title: 'Going International', desc: 'Masakali launches in Cupertino, California, USA — our first international location in the heart of Silicon Valley.' },
   { year: '2026', title: 'Digital Future', desc: 'Launch of unified digital platform for all locations. Building the future of Masakali Restaurant Group.' },
 ];
 
