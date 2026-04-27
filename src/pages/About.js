@@ -94,7 +94,7 @@ export default function About() {
               The Story of <span className="text-gold-gradient">Masakali</span>
             </h1>
             <p className="text-neutral-600 dark:text-neutral-400 text-lg leading-relaxed">
-              What began as a dream in 2026 has grown into one of Canada's most exciting 
+              What began as a dream in 2021 has grown into one of Canada's most exciting 
               Indian restaurant groups. Masakali is more than a restaurant — it's a celebration 
               of culture, flavor, and community.
             </p>
