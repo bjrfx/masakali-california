@@ -124,7 +124,7 @@ export default function Footer() {
             © {new Date().getFullYear()} Masakali Restaurant Group. All rights reserved.
           </p>
           <p className="text-neutral-400 dark:text-neutral-600 text-xs">
-            Est. 2021 · Ottawa · Montreal · California
+            Est. 2026 · Ottawa · Montreal · California
           </p>
         </div>
       </div>
