@@ -172,6 +172,22 @@ async function initDB() {
     } catch (migrationErr) {
       console.log('Reservation geolocation columns migration skipped:', migrationErr.message);
     }
+    // Reservation settings table (Tuesday toggle, etc.)
+    try {
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS reservation_settings (
+          id TINYINT PRIMARY KEY DEFAULT 1,
+          tuesday_disabled BOOLEAN NOT NULL DEFAULT TRUE,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      await db.query(
+        `INSERT INTO reservation_settings (id, tuesday_disabled) VALUES (1, TRUE)
+         ON DUPLICATE KEY UPDATE id = id`
+      );
+    } catch (settingsErr) {
+      console.log('Reservation settings migration skipped:', settingsErr.message);
+    }
     console.log('✓ MySQL database connected');
   } catch (err) {
     console.log('✗ Database not available, using mock data:', err.message);
@@ -620,6 +636,10 @@ let mockEmailNotificationSettings = {
   reservations_email: '',
   contact_email: '',
   catering_email: '',
+};
+
+let mockReservationSettings = {
+  tuesday_disabled: true,
 };
 
 let nextReservationId = 9;
@@ -1656,6 +1676,42 @@ app.put('/api/admin/notification-emails', authMiddleware, async (req, res) => {
   }
 });
 
+// --- Reservation Settings (Tuesday toggle) ---
+app.get('/api/reservation-settings', async (req, res) => {
+  if (db) {
+    try {
+      const [rows] = await db.query('SELECT * FROM reservation_settings WHERE id = 1');
+      if (rows.length) return res.json(rows[0]);
+    } catch (err) {
+      console.error('Failed to fetch reservation settings:', err.message);
+    }
+  }
+  return res.json(mockReservationSettings);
+});
+
+app.put('/api/admin/reservation-settings', authMiddleware, async (req, res) => {
+  const { tuesday_disabled } = req.body || {};
+  const value = tuesday_disabled === true || tuesday_disabled === 'true' || tuesday_disabled === 1;
+
+  if (db) {
+    try {
+      await db.query(
+        `INSERT INTO reservation_settings (id, tuesday_disabled) VALUES (1, ?)
+         ON DUPLICATE KEY UPDATE tuesday_disabled = VALUES(tuesday_disabled)`,
+        [value]
+      );
+      const [rows] = await db.query('SELECT * FROM reservation_settings WHERE id = 1');
+      return res.json(rows[0]);
+    } catch (err) {
+      console.error('Failed to update reservation settings:', err.message);
+      return res.status(500).json({ error: 'Failed to update reservation settings' });
+    }
+  }
+
+  mockReservationSettings.tuesday_disabled = value;
+  return res.json(mockReservationSettings);
+});
+
 // --- Reservations ---
 app.get('/api/reservations', authMiddleware, async (req, res) => {
   const { branch, date, status } = req.query;
@@ -1689,6 +1745,26 @@ app.post('/api/reservations', async (req, res) => {
 
   if (!normalizedEmail || !normalizedPhone) {
     return res.status(400).json({ error: 'Valid email and phone are required.' });
+  }
+
+  // Server-side Tuesday validation
+  if (date) {
+    const reservationDate = new Date(date + 'T00:00:00');
+    if (reservationDate.getDay() === 2) {
+      // Check if Tuesday is disabled
+      let tuesdayBlocked = true;
+      if (db) {
+        try {
+          const [settingsRows] = await db.query('SELECT tuesday_disabled FROM reservation_settings WHERE id = 1');
+          if (settingsRows.length) tuesdayBlocked = !!settingsRows[0].tuesday_disabled;
+        } catch (e) { /* default to blocked */ }
+      } else {
+        tuesdayBlocked = mockReservationSettings.tuesday_disabled;
+      }
+      if (tuesdayBlocked) {
+        return res.status(400).json({ error: 'Sorry, reservations are not available on Tuesdays.' });
+      }
+    }
   }
 
   if (db) {

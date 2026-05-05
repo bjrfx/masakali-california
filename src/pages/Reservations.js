@@ -27,6 +27,21 @@ function formatDateOnly(value) {
   return match ? match[1] : text;
 }
 
+/** Returns today's date in YYYY-MM-DD using the browser's LOCAL timezone (not UTC). */
+function getLocalToday() {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Check if a YYYY-MM-DD date string falls on a Tuesday (day 2). */
+function isTuesday(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.getDay() === 2;
+}
+
 export default function Reservations() {
   const [restaurants, setRestaurants] = useState([]);
   const [form, setForm] = useState({
@@ -36,6 +51,7 @@ export default function Reservations() {
   const [submitted, setSubmitted] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
   const [error, setError] = useState('');
+  const [tuesdayDisabled, setTuesdayDisabled] = useState(true);
 
   useEffect(() => {
     api.getRestaurants()
@@ -48,6 +64,15 @@ export default function Reservations() {
         setRestaurants(californiaOnly);
       })
       .catch(console.error);
+
+    // Fetch Tuesday reservation setting
+    api.getReservationSettings()
+      .then((data) => {
+        setTuesdayDisabled(data?.tuesday_disabled ?? true);
+      })
+      .catch(() => {
+        setTuesdayDisabled(true);
+      });
   }, []);
 
   useEffect(() => {
@@ -65,6 +90,12 @@ export default function Reservations() {
       return;
     }
 
+    // Block Tuesday selection if disabled
+    if (name === 'date' && value && tuesdayDisabled && isTuesday(value)) {
+      setError('Sorry, reservations are not available on Tuesdays. Please select a different date.');
+      return;
+    }
+
     setForm({ ...form, [name]: value });
     setError('');
   };
@@ -78,6 +109,12 @@ export default function Reservations() {
 
     if (!/^\d{10}$/.test(form.phone)) {
       setError('Phone number must be exactly 10 digits.');
+      return;
+    }
+
+    // Extra server-side guard: block Tuesday submissions
+    if (tuesdayDisabled && isTuesday(form.date)) {
+      setError('Sorry, reservations are not available on Tuesdays.');
       return;
     }
 
@@ -119,7 +156,7 @@ export default function Reservations() {
     setConfirmation(null);
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalToday();
 
   return (
     <div className="min-h-screen pt-20 relative">
