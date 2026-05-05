@@ -210,6 +210,19 @@ VALUES (1, NULL, NULL, NULL)
 ON DUPLICATE KEY UPDATE id = id;
 
 -- =====================================================
+-- Reservation Settings (Tuesday toggle, etc.)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS reservation_settings (
+  id TINYINT PRIMARY KEY DEFAULT 1,
+  tuesday_disabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO reservation_settings (id, tuesday_disabled)
+VALUES (1, TRUE)
+ON DUPLICATE KEY UPDATE id = id;
+
+-- =====================================================
 -- Seed Data: Restaurants
 -- =====================================================
 INSERT INTO restaurants (name, slug, brand, address, city, province_state, country, phone, email, website) VALUES

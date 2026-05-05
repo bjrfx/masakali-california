@@ -79,6 +79,10 @@ export const api = {
 
   // Analytics
   getAnalytics: () => apiCall('/analytics/overview'),
+
+  // Reservation Settings (Tuesday toggle)
+  getReservationSettings: () => apiCall('/reservation-settings', { auth: false }),
+  updateReservationSettings: (data) => apiCall('/admin/reservation-settings', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 export default api;
