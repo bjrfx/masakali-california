@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
-import { CalendarDays, Clock, Users, MapPin, Check, Loader2, ArrowRight, Phone, Mail, MessageSquare } from 'lucide-react';
+import { CalendarDays, Clock, Users, MapPin, Check, Loader2, ArrowRight, Phone, Mail, MessageSquare, PauseCircle } from 'lucide-react';
 import api from '../api';
 import { gtagEvent, trackGoogleAdsConversion } from '../utils/gtag';
 
@@ -52,6 +52,8 @@ export default function Reservations() {
   const [confirmation, setConfirmation] = useState(null);
   const [error, setError] = useState('');
   const [tuesdayDisabled, setTuesdayDisabled] = useState(true);
+  const [reservationsPaused, setReservationsPaused] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
     api.getRestaurants()
@@ -65,13 +67,17 @@ export default function Reservations() {
       })
       .catch(console.error);
 
-    // Fetch Tuesday reservation setting
+    // Fetch reservation settings
     api.getReservationSettings()
       .then((data) => {
         setTuesdayDisabled(data?.tuesday_disabled ?? true);
+        setReservationsPaused(!!data?.reservations_paused);
+        setSettingsLoaded(true);
       })
       .catch(() => {
         setTuesdayDisabled(true);
+        setReservationsPaused(false);
+        setSettingsLoaded(true);
       });
   }, []);
 
@@ -115,6 +121,12 @@ export default function Reservations() {
     // Extra server-side guard: block Tuesday submissions
     if (tuesdayDisabled && isTuesday(form.date)) {
       setError('Sorry, reservations are not available on Tuesdays.');
+      return;
+    }
+
+    // Block if paused
+    if (reservationsPaused) {
+      setError('Reservations are currently paused. Please try again later or contact us directly.');
       return;
     }
 
@@ -194,7 +206,45 @@ export default function Reservations() {
         <div className="indian-vine-right" />
         <div className="max-w-4xl mx-auto px-4">
           <AnimatePresence mode="wait">
-            {submitted ? (
+            {reservationsPaused && settingsLoaded ? (
+              /* ── Paused Banner ── */
+              <motion.div
+                key="paused"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white dark:bg-neutral-900 border border-red-500/20 rounded-2xl p-10 text-center shadow-sm dark:shadow-none"
+              >
+                <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <PauseCircle size={40} className="text-red-500 dark:text-red-400" />
+                </div>
+                <h2 className="font-display text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                  Reservations Paused
+                </h2>
+                <p className="text-neutral-600 dark:text-neutral-400 text-lg mb-3 max-w-lg mx-auto">
+                  Online reservations are currently paused for the day.
+                </p>
+                <p className="text-neutral-500 dark:text-neutral-500 text-sm mb-8 max-w-md mx-auto">
+                  We apologize for the inconvenience. Please check back later or contact us directly to make a reservation.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <a
+                    href="tel:+14083525097"
+                    className="btn-gold inline-flex items-center gap-2"
+                  >
+                    <Phone size={18} />
+                    Call (408) 352-5097
+                  </a>
+                  <a
+                    href="mailto:masakalicalifornia@gmail.com"
+                    className="btn-outline-gold inline-flex items-center gap-2"
+                  >
+                    <Mail size={18} />
+                    Email Us
+                  </a>
+                </div>
+              </motion.div>
+            ) : submitted ? (
               <motion.div
                 key="confirmation"
                 initial={{ opacity: 0, scale: 0.95 }}
