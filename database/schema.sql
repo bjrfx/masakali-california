@@ -210,16 +210,17 @@ VALUES (1, NULL, NULL, NULL)
 ON DUPLICATE KEY UPDATE id = id;
 
 -- =====================================================
--- Reservation Settings (Tuesday toggle, etc.)
+-- Reservation Settings (Tuesday toggle, pause, etc.)
 -- =====================================================
 CREATE TABLE IF NOT EXISTS reservation_settings (
   id TINYINT PRIMARY KEY DEFAULT 1,
   tuesday_disabled BOOLEAN NOT NULL DEFAULT TRUE,
+  reservations_paused BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO reservation_settings (id, tuesday_disabled)
-VALUES (1, TRUE)
+INSERT INTO reservation_settings (id, tuesday_disabled, reservations_paused)
+VALUES (1, TRUE, FALSE)
 ON DUPLICATE KEY UPDATE id = id;
 
 -- =====================================================
@@ -331,3 +332,9 @@ CREATE TABLE IF NOT EXISTS testimonials (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
+-- =====================================================
+-- Migration: Add reservations_paused column to reservation_settings
+-- Run this on existing databases where the table already exists.
+-- =====================================================
+ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS reservations_paused BOOLEAN NOT NULL DEFAULT FALSE;

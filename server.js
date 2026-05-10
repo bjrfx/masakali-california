@@ -178,13 +178,18 @@ async function initDB() {
         CREATE TABLE IF NOT EXISTS reservation_settings (
           id TINYINT PRIMARY KEY DEFAULT 1,
           tuesday_disabled BOOLEAN NOT NULL DEFAULT TRUE,
+          reservations_paused BOOLEAN NOT NULL DEFAULT FALSE,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `);
       await db.query(
-        `INSERT INTO reservation_settings (id, tuesday_disabled) VALUES (1, TRUE)
+        `INSERT INTO reservation_settings (id, tuesday_disabled, reservations_paused) VALUES (1, TRUE, FALSE)
          ON DUPLICATE KEY UPDATE id = id`
       );
+      // Ensure reservations_paused column exists for older tables
+      try {
+        await db.query('ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS reservations_paused BOOLEAN NOT NULL DEFAULT FALSE');
+      } catch (_) { /* column already exists */ }
     } catch (settingsErr) {
       console.log('Reservation settings migration skipped:', settingsErr.message);
     }
@@ -640,6 +645,7 @@ let mockEmailNotificationSettings = {
 
 let mockReservationSettings = {
   tuesday_disabled: true,
+  reservations_paused: false,
 };
 
 let nextReservationId = 9;
@@ -1690,15 +1696,16 @@ app.get('/api/reservation-settings', async (req, res) => {
 });
 
 app.put('/api/admin/reservation-settings', authMiddleware, async (req, res) => {
-  const { tuesday_disabled } = req.body || {};
-  const value = tuesday_disabled === true || tuesday_disabled === 'true' || tuesday_disabled === 1;
+  const body = req.body || {};
+  const tuesdayValue = body.tuesday_disabled === true || body.tuesday_disabled === 'true' || body.tuesday_disabled === 1;
+  const pausedValue = body.reservations_paused === true || body.reservations_paused === 'true' || body.reservations_paused === 1;
 
   if (db) {
     try {
       await db.query(
-        `INSERT INTO reservation_settings (id, tuesday_disabled) VALUES (1, ?)
-         ON DUPLICATE KEY UPDATE tuesday_disabled = VALUES(tuesday_disabled)`,
-        [value]
+        `INSERT INTO reservation_settings (id, tuesday_disabled, reservations_paused) VALUES (1, ?, ?)
+         ON DUPLICATE KEY UPDATE tuesday_disabled = VALUES(tuesday_disabled), reservations_paused = VALUES(reservations_paused)`,
+        [tuesdayValue, pausedValue]
       );
       const [rows] = await db.query('SELECT * FROM reservation_settings WHERE id = 1');
       return res.json(rows[0]);
@@ -1708,7 +1715,8 @@ app.put('/api/admin/reservation-settings', authMiddleware, async (req, res) => {
     }
   }
 
-  mockReservationSettings.tuesday_disabled = value;
+  mockReservationSettings.tuesday_disabled = tuesdayValue;
+  mockReservationSettings.reservations_paused = pausedValue;
   return res.json(mockReservationSettings);
 });
 
@@ -1745,6 +1753,20 @@ app.post('/api/reservations', async (req, res) => {
 
   if (!normalizedEmail || !normalizedPhone) {
     return res.status(400).json({ error: 'Valid email and phone are required.' });
+  }
+
+  // Server-side pause check
+  let isPaused = false;
+  if (db) {
+    try {
+      const [settingsRows] = await db.query('SELECT reservations_paused FROM reservation_settings WHERE id = 1');
+      if (settingsRows.length) isPaused = !!settingsRows[0].reservations_paused;
+    } catch (e) { /* default to not paused */ }
+  } else {
+    isPaused = !!mockReservationSettings.reservations_paused;
+  }
+  if (isPaused) {
+    return res.status(400).json({ error: 'Reservations are currently paused for today. Please try again later or contact us directly.' });
   }
 
   // Server-side Tuesday validation
