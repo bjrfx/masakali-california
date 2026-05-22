@@ -338,3 +338,31 @@ CREATE TABLE IF NOT EXISTS testimonials (
 -- Run this on existing databases where the table already exists.
 -- =====================================================
 ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS reservations_paused BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- =====================================================
+-- Hiring Banner Settings
+-- =====================================================
+CREATE TABLE IF NOT EXISTS hiring_banner_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    is_enabled TINYINT(1) DEFAULT 1,
+    banner_text VARCHAR(255) NOT NULL,
+    cta_text VARCHAR(100) DEFAULT 'Apply Now',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+INSERT INTO hiring_banner_settings (id, is_enabled, banner_text, cta_text)
+VALUES (1, 1, 'JOIN OUR TEAM: NOW HIRING ✨ Cupertino Now Open! ✨', 'Apply Now')
+ON DUPLICATE KEY UPDATE id = id;
+
+-- =====================================================
+-- Hiring Applications
+-- =====================================================
+CREATE TABLE IF NOT EXISTS hiring_applications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    phone_number VARCHAR(30) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    resume_file VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
