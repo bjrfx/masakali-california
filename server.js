@@ -104,14 +104,16 @@ async function initDB() {
         reservations_email VARCHAR(255) DEFAULT NULL,
         contact_email VARCHAR(255) DEFAULT NULL,
         catering_email VARCHAR(255) DEFAULT NULL,
+        hiring_email VARCHAR(255) DEFAULT NULL,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
     await db.query(
-      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email)
-       VALUES (1, NULL, NULL, NULL)
+      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email, hiring_email)
+       VALUES (1, NULL, NULL, NULL, NULL)
        ON DUPLICATE KEY UPDATE id = id`
     );
+    await db.query('ALTER TABLE email_notification_settings ADD COLUMN IF NOT EXISTS hiring_email VARCHAR(255) DEFAULT NULL');
     try {
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_latitude DECIMAL(10, 8) NULL');
       await db.query('ALTER TABLE reservations ADD COLUMN IF NOT EXISTS geolocation_longitude DECIMAL(11, 8) NULL');
@@ -682,6 +684,7 @@ let mockEmailNotificationSettings = {
   reservations_email: '',
   contact_email: '',
   catering_email: '',
+  hiring_email: '',
 };
 
 let mockReservationSettings = {
@@ -957,13 +960,14 @@ async function getEmailNotificationSettings() {
   if (db) {
     try {
       const [rows] = await db.query(
-        'SELECT reservations_email, contact_email, catering_email FROM email_notification_settings WHERE id = 1 LIMIT 1'
+        'SELECT reservations_email, contact_email, catering_email, hiring_email FROM email_notification_settings WHERE id = 1 LIMIT 1'
       );
       if (rows.length) {
         return {
           reservations_email: normalizeRecipientSetting(rows[0].reservations_email),
           contact_email: normalizeRecipientSetting(rows[0].contact_email),
           catering_email: normalizeRecipientSetting(rows[0].catering_email),
+          hiring_email: normalizeRecipientSetting(rows[0].hiring_email),
         };
       }
     } catch (err) {
@@ -975,6 +979,7 @@ async function getEmailNotificationSettings() {
     reservations_email: normalizeRecipientSetting(mockEmailNotificationSettings.reservations_email),
     contact_email: normalizeRecipientSetting(mockEmailNotificationSettings.contact_email),
     catering_email: normalizeRecipientSetting(mockEmailNotificationSettings.catering_email),
+    hiring_email: normalizeRecipientSetting(mockEmailNotificationSettings.hiring_email),
   };
 }
 
@@ -983,17 +988,19 @@ async function saveEmailNotificationSettings(input) {
     reservations_email: normalizeRecipientSetting(input?.reservations_email),
     contact_email: normalizeRecipientSetting(input?.contact_email),
     catering_email: normalizeRecipientSetting(input?.catering_email),
+    hiring_email: normalizeRecipientSetting(input?.hiring_email),
   };
 
   if (db) {
     await db.query(
-      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email)
-       VALUES (1, ?, ?, ?)
+      `INSERT INTO email_notification_settings (id, reservations_email, contact_email, catering_email, hiring_email)
+       VALUES (1, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          reservations_email = VALUES(reservations_email),
          contact_email = VALUES(contact_email),
-         catering_email = VALUES(catering_email)`,
-      [nextSettings.reservations_email || null, nextSettings.contact_email || null, nextSettings.catering_email || null]
+         catering_email = VALUES(catering_email),
+         hiring_email = VALUES(hiring_email)`,
+      [nextSettings.reservations_email || null, nextSettings.contact_email || null, nextSettings.catering_email || null, nextSettings.hiring_email || null]
     );
   } else {
     mockEmailNotificationSettings = { ...nextSettings };
@@ -1144,6 +1151,52 @@ async function sendCateringNotification(requestPayload) {
     });
   } catch (err) {
     console.error('Catering notification email error:', err.message);
+  }
+}
+
+async function sendHiringApplicationNotification(application) {
+  const settings = await getEmailNotificationSettings();
+  const hiringRecipients = splitRecipientEmails(settings.hiring_email);
+
+  if (!contactTransporter) {
+    console.log('Hiring application email skipped (contact mailbox not configured).');
+    return;
+  }
+
+  if (!hiringRecipients.length) {
+    console.log('Hiring application email skipped (no hiring recipient configured).');
+    return;
+  }
+
+  const submittedAt = application?.created_at
+    ? new Date(application.created_at).toLocaleString('en-US')
+    : new Date().toLocaleString('en-US');
+  const resumeValue = application?.resume_file || 'Not uploaded';
+
+  try {
+    await contactTransporter.sendMail({
+      from: `"Hiring Notifications" <${contactEmailUser}>`,
+      to: hiringRecipients.join(', '),
+      replyTo: application?.email || contactEmailUser,
+      subject: 'New Join Our Team Application',
+      html: `
+        <div style="font-family:Verdana, Geneva, Tahoma, sans-serif;background:#f3f4f6;padding:20px;">
+          <div style="max-width:620px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;">
+            <h2 style="margin:0 0 14px 0;color:#111827;">New Join Our Team Application</h2>
+            <table style="width:100%;border-collapse:collapse;">
+              <tr><td style="padding:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;">Full Name</td><td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(application?.full_name || '')}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;">Phone Number</td><td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(application?.phone_number || '')}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;">Email</td><td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(application?.email || '')}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;">Resume</td><td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(resumeValue)}</td></tr>
+              <tr><td style="padding:8px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;">Submitted</td><td style="padding:8px;border:1px solid #e5e7eb;">${escapeHtml(submittedAt)}</td></tr>
+            </table>
+          </div>
+        </div>
+      `,
+      text: `New hiring application:\nFull Name: ${application?.full_name || ''}\nPhone Number: ${application?.phone_number || ''}\nEmail: ${application?.email || ''}\nResume: ${resumeValue}\nSubmitted: ${submittedAt}`,
+    });
+  } catch (err) {
+    console.error('Hiring notification email error:', err.message);
   }
 }
 
@@ -1718,13 +1771,14 @@ app.get('/api/admin/notification-emails', authMiddleware, async (req, res) => {
 });
 
 app.put('/api/admin/notification-emails', authMiddleware, async (req, res) => {
-  const { reservations_email, contact_email, catering_email } = req.body || {};
+  const { reservations_email, contact_email, catering_email, hiring_email } = req.body || {};
 
   try {
     const settings = await saveEmailNotificationSettings({
       reservations_email,
       contact_email,
       catering_email,
+      hiring_email,
     });
     return res.json(settings);
   } catch (err) {
@@ -2623,6 +2677,7 @@ app.post('/api/hiring-applications', (req, res) => {
           [name, phone, emailVal, resumeFile]
         );
         const [rows] = await db.query('SELECT * FROM hiring_applications WHERE id = ?', [result.insertId]);
+        sendHiringApplicationNotification(rows[0]);
         return res.json({ success: true, application: rows[0] });
       } catch (err) {
         console.error('Failed to save hiring application:', err.message);
@@ -2640,6 +2695,7 @@ app.post('/api/hiring-applications', (req, res) => {
       created_at: new Date().toISOString(),
     };
     mockHiringApplications.push(newApp);
+    sendHiringApplicationNotification(newApp);
     return res.json({ success: true, application: newApp });
   });
 });
