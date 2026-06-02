@@ -53,6 +53,9 @@ export const api = {
   deleteTestimonial: (id) => apiCall(`/admin/testimonials/${id}`, { method: 'DELETE' }),
   getNotificationEmails: () => apiCall('/admin/notification-emails'),
   updateNotificationEmails: (data) => apiCall('/admin/notification-emails', { method: 'PUT', body: JSON.stringify(data) }),
+  getOnlineOrderPopupSettings: () => apiCall('/online-order-popup', { auth: false }),
+  getAdminOnlineOrderPopupSettings: () => apiCall('/admin/online-order-popup'),
+  updateOnlineOrderPopupSettings: (data) => apiCall('/admin/online-order-popup', { method: 'PUT', body: JSON.stringify(data) }),
 
   // Reservations
   getReservations: (params = {}) => {
@@ -63,6 +66,7 @@ export const api = {
   findManageReservations: (email, phone) => apiCall('/reservations/manage', { method: 'POST', body: JSON.stringify({ email, phone }), auth: false }),
   updateManagedReservation: (id, data) => apiCall(`/reservations/manage/${id}`, { method: 'PUT', body: JSON.stringify(data), auth: false }),
   updateReservation: (id, data) => apiCall(`/reservations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  reservationAction: (id, action, extra = {}) => apiCall(`/admin/reservations/${id}/action`, { method: 'POST', body: JSON.stringify({ action, ...extra }) }),
   deleteReservation: (id) => apiCall(`/reservations/${id}`, { method: 'DELETE' }),
 
   // Catering
@@ -82,7 +86,28 @@ export const api = {
 
   // Reservation Settings (Tuesday toggle)
   getReservationSettings: () => apiCall('/reservation-settings', { auth: false }),
+  getReservationAvailability: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/reservation-availability${query ? `?${query}` : ''}`, { auth: false });
+  },
   updateReservationSettings: (data) => apiCall('/admin/reservation-settings', { method: 'PUT', body: JSON.stringify(data) }),
+
+  // Smart Reservation Calendar
+  getCapacitySettings: () => apiCall('/admin/capacity-settings'),
+  updateCapacitySettings: (settings) => apiCall('/admin/capacity-settings', { method: 'PUT', body: JSON.stringify({ settings }) }),
+  getReservationBlockouts: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/admin/reservation-blockouts${query ? `?${query}` : ''}`);
+  },
+  createReservationBlockouts: (data) => apiCall('/admin/reservation-blockouts', { method: 'POST', body: JSON.stringify(data) }),
+  deleteReservationBlockout: (id) => apiCall(`/admin/reservation-blockouts/${id}`, { method: 'DELETE' }),
+  getAdminNotifications: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/admin/notifications${query ? `?${query}` : ''}`);
+  },
+  markAdminNotificationRead: (id) => apiCall(`/admin/notifications/${id}/read`, { method: 'PUT' }),
+  markAllAdminNotificationsRead: () => apiCall('/admin/notifications/read-all', { method: 'PUT' }),
+  getCalendarSummary: (start, end) => apiCall(`/admin/calendar/summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`),
 
   // Hiring Banner
   getHiringBanner: () => apiCall('/hiring-banner', { auth: false }),

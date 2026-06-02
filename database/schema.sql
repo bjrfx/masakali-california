@@ -366,3 +366,67 @@ CREATE TABLE IF NOT EXISTS hiring_applications (
     resume_file VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =====================================================
+-- Smart Reservation Calendar: Capacity + Blockouts + Notifications
+-- =====================================================
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS service_period ENUM('lunch', 'dinner') DEFAULT NULL;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS is_vip TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS seated_at DATETIME NULL;
+ALTER TABLE reservations ADD COLUMN IF NOT EXISTS table_assigned VARCHAR(80) DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS location_capacity_settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  restaurant_id INT NOT NULL,
+  service_period ENUM('lunch', 'dinner') NOT NULL,
+  total_seats INT NOT NULL DEFAULT 0,
+  avg_duration_minutes INT NOT NULL DEFAULT 90,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_capacity_rest_period (restaurant_id, service_period),
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reservation_blockouts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  restaurant_id INT NOT NULL,
+  block_date DATE NOT NULL,
+  service_period ENUM('all_day', 'lunch', 'dinner') NOT NULL DEFAULT 'all_day',
+  reason VARCHAR(255) DEFAULT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_by INT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_blockout (restaurant_id, block_date, service_period),
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES admins(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS admin_notifications (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  type ENUM('reservation', 'contact', 'catering', 'system') NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT DEFAULT NULL,
+  entity_type VARCHAR(50) DEFAULT NULL,
+  entity_id INT DEFAULT NULL,
+  restaurant_id INT DEFAULT NULL,
+  payload_json JSON DEFAULT NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_admin_notifications_read_created (is_read, created_at),
+  INDEX idx_admin_notifications_restaurant (restaurant_id),
+  FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS reservation_table_assignments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  reservation_id INT NOT NULL,
+  table_label VARCHAR(80) NOT NULL,
+  seats INT DEFAULT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  assigned_by INT DEFAULT NULL,
+  UNIQUE KEY uniq_reservation_table (reservation_id),
+  FOREIGN KEY (reservation_id) REFERENCES reservations(id) ON DELETE CASCADE,
+  FOREIGN KEY (assigned_by) REFERENCES admins(id) ON DELETE SET NULL
+);
