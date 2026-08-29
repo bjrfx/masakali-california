@@ -281,11 +281,13 @@ CREATE TABLE IF NOT EXISTS reservation_settings (
   id TINYINT PRIMARY KEY DEFAULT 1,
   tuesday_disabled BOOLEAN NOT NULL DEFAULT TRUE,
   reservations_paused BOOLEAN NOT NULL DEFAULT FALSE,
+  time_restriction_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  reservation_time_warning_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-INSERT INTO reservation_settings (id, tuesday_disabled, reservations_paused)
-VALUES (1, TRUE, FALSE)
+INSERT INTO reservation_settings (id, tuesday_disabled, reservations_paused, time_restriction_enabled, reservation_time_warning_enabled)
+VALUES (1, TRUE, FALSE, TRUE, FALSE)
 ON DUPLICATE KEY UPDATE id = id;
 
 -- =====================================================
@@ -403,6 +405,8 @@ CREATE TABLE IF NOT EXISTS testimonials (
 -- Run this on existing databases where the table already exists.
 -- =====================================================
 ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS reservations_paused BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS time_restriction_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE reservation_settings ADD COLUMN IF NOT EXISTS reservation_time_warning_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- =====================================================
 -- Hiring Banner Settings
