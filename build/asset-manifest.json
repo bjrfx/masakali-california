@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.d51001c0.css",
-    "main.js": "/static/js/main.e407f2d6.js",
+    "main.js": "/static/js/main.e0185dbb.js",
     "static/media/masakali-intro.mp4": "/static/media/masakali-intro.17d34fa4eaeac5fd8eee.mp4",
     "static/media/re3stobar.webp": "/static/media/re3stobar.d2b3b605628e60cb0f98.webp",
     "static/media/stittsville1.webp": "/static/media/stittsville1.6d25e5665d4b5d97be81.webp",
@@ -15,10 +15,10 @@
     "static/media/doordash.png": "/static/media/doordash.e6826744598759304e0b.png",
     "index.html": "/index.html",
     "main.d51001c0.css.map": "/static/css/main.d51001c0.css.map",
-    "main.e407f2d6.js.map": "/static/js/main.e407f2d6.js.map"
+    "main.e0185dbb.js.map": "/static/js/main.e0185dbb.js.map"
   },
   "entrypoints": [
     "static/css/main.d51001c0.css",
-    "static/js/main.e407f2d6.js"
+    "static/js/main.e0185dbb.js"
   ]
 }
