@@ -32,7 +32,7 @@ function createEmailTemplateSystem(options) {
   function createEmailTransporter(user, pass) {
     if (!user || !pass) return null;
     try { return nodemailer.createTransport({ host: SMTP_HOST, port: SMTP_PORT, secure: true, auth: { user, pass } }); }
-    catch (err) { console.log('Email transporter not configured for user:', user, err.message); return null; }
+    catch (err) { console.error('Email transporter initialization failed:', { code: err?.code || '', error_name: err?.name || 'Error' }); return null; }
   }
   const reservationTransporter = createEmailTransporter(reservationEmailUser, reservationEmailPass);
   const contactTransporter = createEmailTransporter(contactEmailUser, contactEmailPass);
@@ -113,7 +113,54 @@ function createEmailTemplateSystem(options) {
   function renderText(template, variables) { return String(template || '').replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_match, key) => stripHtml(variables[key] ?? '')); }
   function adminReservationLocationName(value) { const name = String(value || '').trim(); const normalized = name.toLowerCase(); if (normalized.includes('stittsville')) return 'Stittsville'; if (normalized.includes('wellington')) return 'Wellington'; if (normalized.includes('rangde')) return 'Rangde Kanata'; if (normalized.includes('restobar') || normalized.includes('resto bar')) return 'Restobar'; if (normalized.includes('cupertino') || normalized.includes('california')) return 'Cupertino'; if (normalized.includes('montreal')) return 'Montreal'; return name.replace(/^Masakali Indian Cuisine\s*[-–—]\s*/i, '').replace(/^Masakali Indian Resto Bar$/i, 'Restobar') || name; }
   async function renderEmail(templateKey, variables, restaurantId = null) { const template = await getEmailTemplate(templateKey, restaurantId); const html = enforceCurrentLogo(renderHtml(template.html_template, variables)); const subjectVariables = templateKey === 'reservation_notification_admin' ? { ...variables, location_name: adminReservationLocationName(variables.location_name) } : variables; return { subject: renderText(template.subject_template, subjectVariables), html, text: renderText(template.text_template || stripHtml(template.html_template), variables), template }; }
-  function buildReservationVariables(reservation, restaurant, location, extra = {}) { const restaurantName = location.restaurant_name || restaurant?.name || siteConfig.defaultRestaurantName; const formattedDate = formatReservationDate(reservation.date) || reservation.date || 'N/A'; const formattedTime = normalizeTimeDisplay(reservation.time); const rows = [['Confirmation Code', reservation.confirmation_code], ['Name', reservation.name], ['Email', reservation.email || 'N/A'], ['Date', formattedDate], ['Time', formattedTime], ['Phone', reservation.phone || 'N/A'], ['Guests', reservation.persons], ['Restaurant', restaurantName]]; if (reservation.special_requests) rows.push(['Special Requests', reservation.special_requests]); const adminRows = [...rows]; if (extra.previous_details) adminRows.push(['Previous Details', extra.previous_details]); if (extra.updated_details) adminRows.push(['Updated Details', extra.updated_details]); return { customer_name: reservation.name || '', customer_email: reservation.email || '', phone_number: reservation.phone || '', location_name: restaurantName, location_address: location.address || '', location_phone: location.phone || '', location_hours: location.business_hours || '', online_order_url: location.online_order_url || '', website_url: websiteBaseUrl, confirmation_code: reservation.confirmation_code || '', reservation_date: formattedDate, reservation_time: formattedTime, guest_count: reservation.persons || '', special_requests: reservation.special_requests || 'N/A', manage_reservation_url: manageReservationsUrl, previous_details: extra.previous_details || '', updated_details: extra.updated_details || '', reservation_details_table: detailRowsHtml(rows), admin_details_table: detailRowsHtml(adminRows), admin_details_text: adminRows.map(([label, value]) => `${label}: ${value || 'N/A'}`).join('\n'), location_card: locationCardHtml(location) }; }
+  function buildReservationVariables(reservation, restaurant, location, extra = {}) {
+    const restaurantName = location.restaurant_name || restaurant?.name || siteConfig.defaultRestaurantName;
+    const formattedDate = formatReservationDate(reservation.date) || reservation.date || 'N/A';
+    const formattedTime = normalizeTimeDisplay(reservation.time);
+    const rows = [
+      ['Confirmation Code', reservation.confirmation_code],
+      ['Name', reservation.name],
+      ['Email', reservation.email || 'N/A'],
+      ['Date', formattedDate],
+      ['Time', formattedTime],
+      ['Phone', reservation.phone || 'N/A'],
+      ['Guests', reservation.persons],
+      ['Restaurant', restaurantName],
+    ];
+    if (reservation.special_requests) rows.push(['Special Requests', reservation.special_requests]);
+
+    const adminRows = [
+      ...rows,
+      ['Restaurant Address', location.address || 'N/A'],
+      ['Restaurant Phone', location.phone || 'N/A'],
+    ];
+    if (extra.previous_details) adminRows.push(['Previous Details', extra.previous_details]);
+    if (extra.updated_details) adminRows.push(['Updated Details', extra.updated_details]);
+
+    return {
+      customer_name: reservation.name || '',
+      customer_email: reservation.email || '',
+      phone_number: reservation.phone || '',
+      location_name: restaurantName,
+      location_address: location.address || '',
+      location_phone: location.phone || '',
+      location_hours: location.business_hours || '',
+      online_order_url: location.online_order_url || '',
+      website_url: websiteBaseUrl,
+      confirmation_code: reservation.confirmation_code || '',
+      reservation_date: formattedDate,
+      reservation_time: formattedTime,
+      guest_count: reservation.persons || '',
+      special_requests: reservation.special_requests || 'N/A',
+      manage_reservation_url: manageReservationsUrl,
+      previous_details: extra.previous_details || '',
+      updated_details: extra.updated_details || '',
+      reservation_details_table: detailRowsHtml(rows),
+      admin_details_table: detailRowsHtml(adminRows),
+      admin_details_text: adminRows.map(([label, value]) => `${label}: ${value || 'N/A'}`).join('\n'),
+      location_card: locationCardHtml(location),
+    };
+  }
   function buildContactVariables(inquiry = {}) { const rows = [['Name', inquiry.name], ['Email', inquiry.email], ['Phone', inquiry.phone || 'N/A'], ['Subject', inquiry.subject || 'N/A'], ['Message', inquiry.message]]; return { customer_name: inquiry.name || '', customer_email: inquiry.email || '', phone_number: inquiry.phone || '', contact_subject: inquiry.subject || '', contact_message: inquiry.message || '', location_name: siteConfig.defaultRestaurantName, location_address: '', location_phone: '', location_hours: '', online_order_url: siteConfig.locations[0]?.online_order_url || '', website_url: websiteBaseUrl, details_list: detailListHtml(rows), details_text: rows.map(([label, value]) => `${label}: ${value || 'N/A'}`).join('\n') }; }
   function buildCateringVariables(payload = {}) { const rows = [['Name', payload.name], ['Email', payload.email], ['Phone', payload.phone || 'N/A'], ['Event Date', payload.event_date || 'N/A'], ['Guests', payload.guests || 'N/A'], ['Location', payload.event_location || 'N/A'], ['Type', payload.event_type || 'N/A'], ['Notes', payload.notes || 'N/A']]; return { customer_name: payload.name || '', customer_email: payload.email || '', phone_number: payload.phone || '', event_date: payload.event_date || 'N/A', guest_count: payload.guests || 'N/A', event_location: payload.event_location || 'N/A', event_type: payload.event_type || 'N/A', notes: payload.notes || 'N/A', location_name: siteConfig.defaultRestaurantName, location_address: '', location_phone: '', location_hours: '', online_order_url: siteConfig.locations[0]?.online_order_url || '', website_url: websiteBaseUrl, details_list: detailListHtml(rows), details_text: rows.map(([label, value]) => `${label}: ${value || 'N/A'}`).join('\n') }; }
   function buildHiringVariables(application = {}) { const submittedAt = application?.created_at ? new Date(application.created_at).toLocaleString('en-US') : new Date().toLocaleString('en-US'); const resumeValue = application?.resume_file || 'Not uploaded'; const rows = [['Full Name', application.full_name || ''], ['Phone Number', application.phone_number || ''], ['Email', application.email || ''], ['Resume', resumeValue], ['Submitted', submittedAt]]; return { customer_name: application.full_name || '', customer_email: application.email || '', phone_number: application.phone_number || '', full_name: application.full_name || '', resume_file: resumeValue, submitted_at: submittedAt, location_name: siteConfig.defaultRestaurantName, location_address: '', location_phone: '', location_hours: '', online_order_url: siteConfig.locations[0]?.online_order_url || '', website_url: websiteBaseUrl, details_list: detailListHtml(rows), details_text: rows.map(([label, value]) => `${label}: ${value || 'N/A'}`).join('\n') }; }
@@ -125,7 +172,90 @@ function createEmailTemplateSystem(options) {
   function deriveServicePeriodFromTime(timeValue) { const hour = parseInt(String(timeValue || '').trim().slice(0, 2), 10); return Number.isFinite(hour) && hour < 16 ? 'lunch' : 'dinner'; }
   function dateRangeInclusive(startDate, endDate) { const from = new Date(`${startDate}T00:00:00`); const to = new Date(`${endDate}T00:00:00`); if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) return []; const out = []; const cursor = new Date(from); while (cursor <= to) { out.push(cursor.toISOString().slice(0, 10)); cursor.setDate(cursor.getDate() + 1); } return out; }
   async function isReservationBlocked({ restaurantId, date, time }) { const period = deriveServicePeriodFromTime(time); if (!restaurantId || !date) return false; const db = getDb(); if (db) { try { const [rows] = await db.query(`SELECT id FROM reservation_blockouts WHERE restaurant_id = ? AND block_date = ? AND is_active = 1 AND (service_period = 'all_day' OR service_period = ?) LIMIT 1`, [Number(restaurantId), String(date), period]); return rows.length > 0; } catch (err) { console.error('Blockout check failed:', err.message); return false; } } return mockReservationBlockouts.some((row) => Number(row.restaurant_id) === Number(restaurantId) && String(row.block_date) === String(date) && Number(row.is_active) === 1 && (row.service_period === 'all_day' || row.service_period === period)); }
-  async function sendReservationEmails(reservation, restaurant) { const settings = await getEmailNotificationSettings(); const adminRecipients = splitRecipientEmails(settings.reservations_email || reservationAdminFallback); if (!reservationTransporter) { console.log('Reservation email skipped (reservation mailbox not configured). Reservation:', reservation.confirmation_code); return; } try { const location = await getEmailLocationForRestaurant(restaurant || { id: reservation.restaurant_id }); const variables = buildReservationVariables(reservation, restaurant, location); const customerEmail = await renderEmail('reservation_confirmation_customer', variables, restaurant?.id || reservation.restaurant_id); await reservationTransporter.sendMail({ from: `"${siteConfig.brand} Reservations" <${reservationEmailUser}>`, to: reservation.email, replyTo: reservationEmailUser, subject: customerEmail.subject, html: customerEmail.html, text: customerEmail.text }); if (adminRecipients.length) { const adminEmail = await renderEmail('reservation_notification_admin', variables, restaurant?.id || reservation.restaurant_id); await reservationTransporter.sendMail({ from: `"${siteConfig.brand} Reservations" <${reservationEmailUser}>`, to: adminRecipients.join(', '), replyTo: reservation.email || reservationEmailUser, subject: adminEmail.subject, html: adminEmail.html, text: adminEmail.text }); } else console.log('Admin reservation notification skipped (no admin recipient configured). Reservation:', reservation.confirmation_code); } catch (err) { console.error('Reservation email error:', err.message); } }
+  async function sendReservationEmails(reservation, restaurant) {
+    const confirmationCode = reservation?.confirmation_code || '';
+    const settings = await getEmailNotificationSettings();
+    const adminRecipients = splitRecipientEmails(settings.reservations_email || reservationAdminFallback);
+    const logSkipped = (kind, reason) => console.error('[reservation-email] skipped', {
+      kind,
+      reason,
+      confirmation_code: confirmationCode,
+    });
+
+    if (!reservationTransporter) {
+      logSkipped('customer', 'transporter_unavailable');
+      logSkipped('admin', 'transporter_unavailable');
+      return { customer: false, admin: false };
+    }
+
+    let location;
+    let variables;
+    try {
+      location = await getEmailLocationForRestaurant(restaurant || { id: reservation.restaurant_id });
+      variables = buildReservationVariables(reservation, restaurant, location);
+    } catch (err) {
+      console.error('[reservation-email] preparation failed', {
+        confirmation_code: confirmationCode,
+        code: err?.code || '',
+        error_name: err?.name || 'Error',
+      });
+      return { customer: false, admin: false };
+    }
+
+    const sendOne = async (kind, recipients, templateKey) => {
+      if (!recipients.length) {
+        logSkipped(kind, 'recipient_not_configured');
+        return false;
+      }
+
+      try {
+        const rendered = await renderEmail(templateKey, variables, restaurant?.id || reservation.restaurant_id);
+        const info = await reservationTransporter.sendMail({
+          from: `"${siteConfig.brand} Reservations" <${reservationEmailUser}>`,
+          to: recipients.join(', '),
+          replyTo: kind === 'admin' ? reservation.email || reservationEmailUser : reservationEmailUser,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+        });
+        const acceptedCount = Array.isArray(info?.accepted) ? info.accepted.length : recipients.length;
+        const rejectedCount = Array.isArray(info?.rejected) ? info.rejected.length : 0;
+        const logData = {
+          kind,
+          confirmation_code: confirmationCode,
+          recipient_count: recipients.length,
+          accepted_count: acceptedCount,
+          rejected_count: rejectedCount,
+          message_id: info?.messageId || '',
+        };
+        if (rejectedCount) {
+          console.error('[reservation-email] SMTP rejected recipient(s)', logData);
+          return false;
+        }
+        console.log('[reservation-email] accepted by SMTP', logData);
+        return true;
+      } catch (err) {
+        console.error('[reservation-email] delivery failed', {
+          kind,
+          confirmation_code: confirmationCode,
+          recipient_count: recipients.length,
+          code: err?.code || '',
+          command: err?.command || '',
+          response_code: err?.responseCode || '',
+          error_name: err?.name || 'Error',
+        });
+        return false;
+      }
+    };
+
+    const customer = await sendOne(
+      'customer',
+      reservation.email ? [String(reservation.email).trim()] : [],
+      'reservation_confirmation_customer'
+    );
+    const admin = await sendOne('admin', adminRecipients, 'reservation_notification_admin');
+    return { customer, admin };
+  }
   async function sendReservationUpdateEmails(previousReservation, updatedReservation, restaurant) { const settings = await getEmailNotificationSettings(); const adminRecipients = splitRecipientEmails(settings.reservations_email || reservationAdminFallback); if (!reservationTransporter) { console.log('Reservation update email skipped (reservation mailbox not configured). Reservation:', updatedReservation.confirmation_code); return; } const oldDetails = `Date: ${formatReservationDate(previousReservation.date) || previousReservation.date}, Time: ${normalizeTimeDisplay(previousReservation.time)}, Guests: ${previousReservation.persons}`; const newDetails = `Date: ${formatReservationDate(updatedReservation.date) || updatedReservation.date}, Time: ${normalizeTimeDisplay(updatedReservation.time)}, Guests: ${updatedReservation.persons}`; try { const location = await getEmailLocationForRestaurant(restaurant || { id: updatedReservation.restaurant_id }); const variables = buildReservationVariables(updatedReservation, restaurant, location, { previous_details: oldDetails, updated_details: newDetails }); const customerEmail = await renderEmail('reservation_update_customer', variables, restaurant?.id || updatedReservation.restaurant_id); await reservationTransporter.sendMail({ from: `"${siteConfig.brand} Reservations" <${reservationEmailUser}>`, to: updatedReservation.email, replyTo: reservationEmailUser, subject: customerEmail.subject, html: customerEmail.html, text: customerEmail.text }); if (adminRecipients.length) { const adminEmail = await renderEmail('reservation_update_admin', variables, restaurant?.id || updatedReservation.restaurant_id); await reservationTransporter.sendMail({ from: `"${siteConfig.brand} Reservations" <${reservationEmailUser}>`, to: adminRecipients.join(', '), replyTo: updatedReservation.email || reservationEmailUser, subject: adminEmail.subject, html: adminEmail.html, text: adminEmail.text }); } else console.log('Admin reservation update notification skipped (no admin recipient configured). Reservation:', updatedReservation.confirmation_code); } catch (err) { console.error('Reservation update email error:', err.message); } }
   async function sendCateringNotification(payload) { const settings = await getEmailNotificationSettings(); const recipients = splitRecipientEmails(settings.catering_email); const variables = buildCateringVariables(payload); if (!contactTransporter) return; try { if (payload.email) { const customerEmail = await renderEmail('catering_inquiry_customer', variables); await contactTransporter.sendMail({ from: `"${siteConfig.brand}" <${contactEmailUser}>`, to: payload.email, replyTo: contactEmailUser, subject: customerEmail.subject, html: customerEmail.html, text: customerEmail.text }); } if (recipients.length) { const adminEmail = await renderEmail('catering_inquiry_notification_admin', variables); await contactTransporter.sendMail({ from: `"${siteConfig.brand} Contact" <${contactEmailUser}>`, to: recipients.join(', '), replyTo: payload.email || contactEmailUser, subject: adminEmail.subject, html: adminEmail.html, text: adminEmail.text }); } } catch (err) { console.error('Catering notification email error:', err.message); } }
   function money(value, currency = 'CAD') { return new Intl.NumberFormat('en-CA', { style: 'currency', currency: currency || 'CAD' }).format(Number(value || 0)); }
