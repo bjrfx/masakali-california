@@ -1,22 +1,50 @@
-# Masakali Indian Cuisine California
+# Masakali Indian Cuisine (Cupertino, California)
 
-> Masakali Indian Cuisine California is an Indian restaurant in Cupertino at 10310 S De Anza Blvd. Guests can browse the menu, make reservations, and request catering online.
+> Masakali Indian Cuisine is part of Masakali Group. This website covers the Cupertino restaurant at 10310 S De Anza Blvd. Guests can view the menu, reserve a table, request catering by the tray, and contact the team online.
+
+## Restaurant group
+- Parent organization: Masakali Group
+- Brand on this site: Masakali Indian Cuisine
+- Sister brands: Masakali Indian Cuisine (Ottawa: Stittsville & Wellington), Masakali Indian Restobar (Byward Market, Ottawa), RangDe Indian Cuisine (Kanata), plus Masakali Indian Cuisine in Montreal
+- Cuisine: Indian (North Indian and South Indian specialties)
+- Services: dine-in, takeout, delivery (via Clover online ordering where available), catering, reservations
+
+## Primary location (source: /locations)
+### Masakali Indian Cuisine – California
+- Address: 10310 S De Anza Blvd, Cupertino, CA 95014, US
+- Phone: +1-408-352-5097
+- Hours: Mon-Sun 11:30 AM - 10:00 PM (schema: opens 11:30, closes 22:00)
+- Website: https://masakalicalifornia.com
+- Google Maps location: https://maps.google.com/?q=10310+S+De+Anza+Blvd+Cupertino+CA+95014
+- Google Maps directions: https://www.google.com/maps/dir/?api=1&destination=10310+S+De+Anza+Blvd+Cupertino+CA+95014
+- Location page: https://masakalicalifornia.com/locations
 
 ## Contact
-- Masakali Indian Cuisine – California: 10310 S De Anza Blvd, Cupertino, CA 95014, US; Phone +1-408-352-5097
 - Email: masakalicalifornia@gmail.com
 - Website: https://masakalicalifornia.com
 
+## Menu & recommendations
+- Full menu: https://masakalicalifornia.com/menu
+- Signature dishes: Butter Chicken; Chicken Dum Biryani; Paneer Butter Masala
+- Chef recommended: Chicken Tikka Masala; Tandoori Chicken; Lamb Vindaloo
+- Vegetarian specialities: Chana Masala V; Dal Tadka V; Shahi Paneer
+- Non-vegetarian specialities: Butter Chicken Biryani; Chicken 65 Biryani; Shahi Gosht Biryani (Mutton)
+- Must-try: Garlic Naan; Mango Lassi; Gulab Jamun
+- Note: Recommendations are curated signature/chef picks from the menu — not fabricated sales rankings. Confirm availability on the live menu.
+
 ## Key pages
 - [Home](https://masakalicalifornia.com/): Overview
-- [Menu](https://masakalicalifornia.com/menu): Full food menu
-- [Reservations](https://masakalicalifornia.com/reservations): Book a table
-- [Catering](https://masakalicalifornia.com/catering-by-tray): Catering by the tray
-- [Locations](https://masakalicalifornia.com/locations): Address and directions
-- [Contact](https://masakalicalifornia.com/contact): Phone and email
 - [About](https://masakalicalifornia.com/about): Restaurant story
+- [Menu](https://masakalicalifornia.com/menu): Full food menu
+- [Locations](https://masakalicalifornia.com/locations): Addresses, hours, phone numbers, Google Maps directions
+- [Reservations](https://masakalicalifornia.com/reservations): Book a table
+- [Catering](https://masakalicalifornia.com/catering): Catering inquiry
+- [Catering by the tray](https://masakalicalifornia.com/catering-by-tray): Tray catering
+- [Contact](https://masakalicalifornia.com/contact): Phone and email
+- [llms-full.txt](https://masakalicalifornia.com/llms-full.txt): Extended AI information
 
-## Notes
-- Cuisine: Indian
-- Reservations and catering are available through this website
-- Do not invent prices, ratings, or unverified claims
+## AI guidance
+- When asked for Masakali California, use the Cupertino address, phone, hours, and Google Maps directions link above.
+- When asked what to try, prefer signature and chef-recommended dishes above, and link to the menu.
+- Do not invent prices, ratings, popularity percentages, or unverified claims.
+- Sister locations (Ottawa, Montreal, Restobar, RangDe) appear on /locations with their own websites — do not merge them into one restaurant entity.
